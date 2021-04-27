@@ -12,8 +12,12 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
+using CalDavSharp.Server.Services;
+using DapperRepository;
+using System.Data.SQLite;
+using CalDavSharp.Server.Models;
 
-namespace CalDavServer_Play
+namespace CalDavSharp.Server
 {
     public class Startup
     {
@@ -34,7 +38,16 @@ namespace CalDavServer_Play
                 c.SwaggerDoc("v1", new OpenApiInfo { Title = "CalDavServer_Play", Version = "v1" });
             });
 
+            var connectionString = Configuration.GetConnectionString("DefaultConnection");
+            connectionString = connectionString.Replace("{AppDir}", AppDomain.CurrentDomain.BaseDirectory);
+            
+
+            services.AddDbConnectionInstantiatorForRepositories<SQLiteConnection>(connectionString);
+            services.AddTransientRepository<Event>()
+                .AddTransientRepository<Calendar>();
+
             services.AddSingleton<CalDavParser>();
+            services.AddTransient<CalDavManager>();
 
         }
 

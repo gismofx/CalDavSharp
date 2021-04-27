@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace CalDavServer_Play
+namespace CalDavSharp.Server.Models
 {
     public class ParsedRequest
     {

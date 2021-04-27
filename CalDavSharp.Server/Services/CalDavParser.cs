@@ -4,8 +4,9 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Xml;
+using CalDavSharp.Server.Models;
 
-namespace CalDavServer_Play
+namespace CalDavSharp.Server.Services
 {
     public class CalDavParser
     {
@@ -82,6 +83,11 @@ namespace CalDavServer_Play
             }
 
             return result;
+        }
+
+        public ParsedRequest ParseReport(XmlDocument xml)
+        {
+            return null;
         }
 
     }

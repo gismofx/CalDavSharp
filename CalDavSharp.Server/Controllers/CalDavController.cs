@@ -7,18 +7,20 @@ using System.Threading.Tasks;
 using System.Xml;
 using Microsoft.AspNetCore.Mvc;
 using static System.Net.WebRequestMethods;
+using CalDavSharp.Server.Services;
 
-namespace CalDavServer_Play.Controllers
+namespace CalDavSharp.Server.Controllers
 {
 
 	[ApiController]
 	[Route("[controller]")]
 	public class CalDavController : ControllerBase
 	{
-		private CalDavParser _Parser = null;
-        public CalDavController(CalDavParser parser)
+		private CalDavManager _Manager = null;
+        
+		public CalDavController(CalDavManager manager)
         {
-			_Parser = parser;
+			_Manager = manager;
         }
 		/*
 		public IActionResult Spa()
@@ -38,7 +40,7 @@ namespace CalDavServer_Play.Controllers
 		[ApiExplorerSettings(IgnoreApi = true)]
 		[Route("calendars")]
 		[Route("calendars/{userName:alpha}/{calendarName:alpha}")]
-		public async Task<ActionResult<XmlDocument>> PropFind([FromRoute] string userName, 
+		public async Task<ActionResult<System.Xml.Linq.XDocument>> PropFind([FromRoute] string userName, 
 											      [FromRoute] string calendarName, 
 												  [FromBody] XmlDocument request)
 		{
@@ -48,10 +50,17 @@ namespace CalDavServer_Play.Controllers
 				return BadRequest();
 			}
 
-			var result = _Parser.ParsePropfind(request);
-			
-			
-			return new XmlDocument();
+			var result = _Manager.Propfind(userName, calendarName, request);
+
+			return new ContentResult
+			{
+				Content = result.ToString(),
+				ContentType = "text/xml",
+				StatusCode = 201
+			};
+
+
+			// StatusCode(201,result);
 
 		}
 		
@@ -71,32 +80,8 @@ namespace CalDavServer_Play.Controllers
 			{
 				return null;
 			}
+			var result = _Manager.Report(userName, calendarName, request);
 
-			if (request.HasChildNodes)
-			{
-				//var parser = new CalDavParser();
-				var firstNode = request.FirstChild;
-				
-				foreach (XmlNode xNode in firstNode.ChildNodes)
-				{
-					if (xNode.NodeType is not XmlNodeType.Whitespace)
-					{
-						Debug.WriteLine(xNode.Name);
-						switch (xNode.Name)
-						{
-							case "d:prop":
-								_Parser.ParseProperties(xNode);
-								break;
-							case "c:filter":
-								_Parser.ParseFilter(xNode);
-								break;
-							default:
-								break;
-
-						}
-					}
-				}
-			}
 
 			//var x = CalendarRepository.FindCalendar
 
