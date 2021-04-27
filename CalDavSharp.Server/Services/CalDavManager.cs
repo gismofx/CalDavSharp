@@ -7,6 +7,7 @@ using CalDavSharp.Server.Models;
 using System.Xml;
 using System.Diagnostics;
 using System.Xml.Linq;
+using static System.Net.WebRequestMethods;
 
 namespace CalDavSharp.Server.Services
 {
@@ -35,7 +36,11 @@ namespace CalDavSharp.Server.Services
                 new XElement("multistatus", new XAttribute(XNamespace.Xmlns +"D", "DAV:"), new XAttribute(XNamespace.Xmlns + "C", "urn:ietf:params:xml:ns:caldav"),
                     new XElement("Response",
                         new XElement(xnsD+"href",$"/calendars/{userName}/{calendarName}"),
-                        new XElement(xnsD+"propstat", "hi"))
+                        new XElement(
+                            xnsD+"propstat",
+                                new XElement(xnsD+"prop"),
+                                StatusCode(xnsD)
+                        )
                            
                     ));
 
@@ -49,7 +54,24 @@ namespace CalDavSharp.Server.Services
             */
 
         }
-
+        
+        //@Todo: Add logic for return code
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="ns"></param>
+        /// <returns></returns>
+        private XElement StatusCode(XNamespace ns)
+        {
+            return new XElement(ns + "status", "HTTP/1.1 200 OK");
+        }
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="userName"></param>
+        /// <param name="calendarName"></param>
+        /// <param name="xmlDoc"></param>
+        /// <returns></returns>
         public XmlDocument Report(string userName, string calendarName, XmlDocument xmlDoc)
         {
 			var result = _Parser.ParseReport(xmlDoc);

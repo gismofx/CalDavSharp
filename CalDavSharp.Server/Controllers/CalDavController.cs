@@ -56,7 +56,7 @@ namespace CalDavSharp.Server.Controllers
 			{
 				Content = result.ToString(),
 				ContentType = "text/xml",
-				StatusCode = 201
+				StatusCode = 207
 			};
 
 
