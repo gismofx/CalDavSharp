@@ -7,5 +7,6 @@ namespace CalDavSharp.Server.Models
 {
     public class Event
     {
+        public DateTime LastModified { get; set; }
     }
 }

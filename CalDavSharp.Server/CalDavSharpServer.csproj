@@ -19,4 +19,12 @@
     </None>
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="NewFolder\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CalDavSharp.Shared\CalDavSharp.Shared.csproj" />
+  </ItemGroup>
+
 </Project>

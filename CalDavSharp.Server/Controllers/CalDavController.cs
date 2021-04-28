@@ -8,6 +8,7 @@ using System.Xml;
 using Microsoft.AspNetCore.Mvc;
 using static System.Net.WebRequestMethods;
 using CalDavSharp.Server.Services;
+using System.Xml.Linq;
 
 namespace CalDavSharp.Server.Controllers
 {
@@ -29,8 +30,45 @@ namespace CalDavSharp.Server.Controllers
 		}*/
 
 		[AcceptVerbs("OPTIONS")]
-		public async Task<IActionResult> Options()
+		public async Task<IActionResult> Options([FromBody] XDocument xmlDoc)
 		{
+			//var xmlDoc = GetRequestXml();
+			if (xmlDoc != null)
+			{
+				var request = xmlDoc.Root.Elements().FirstOrDefault();
+				switch (request.Name.LocalName.ToLower())
+				{
+					case "calendar-collection-set":
+						break;
+						//var repo = GetService<ICalendarRepository>();
+						//var calendars = repo.GetCalendars().ToArray();
+						/*
+						return new Result
+						{
+							Content =new XElement("options-response",
+								new XElement("calendar-collection-set",
+									calendars.Select(calendar =>
+									new XElement("href",
+										 new Uri(Request.Url, GetCalendarUrl(calendar.Name))
+										 ))
+							 )
+						 )
+						};
+						*/
+				}
+			}
+
+
+			var Headers = new Dictionary<string, string> {
+					{"Allow", "OPTIONS, PROPFIND, HEAD, GET, REPORT, PROPPATCH, PUT, DELETE, POST" }
+				};
+			return new ContentResult()
+			{
+				StatusCode=200,
+				Content = "",
+				ContentType="text/xml"
+			};
+
 			throw new NotImplementedException();
 			return null;
 		}
@@ -42,15 +80,18 @@ namespace CalDavSharp.Server.Controllers
 		[Route("calendars/{userName:alpha}/{calendarName:alpha}")]
 		public async Task<ActionResult<System.Xml.Linq.XDocument>> PropFind([FromRoute] string userName, 
 											      [FromRoute] string calendarName, 
-												  [FromBody] XmlDocument request)
+												  [FromBody] XElement xrequest)
 		{
 			//throw new NotImplementedException();
 			if (userName is null && calendarName is null)
 			{
 				return BadRequest();
 			}
+			var headers = HttpContext.Request.Headers;
+			var depth = headers["Depth"].Count==0 ? 0 : int.Parse(headers["Depth"]);
+			var request = new XDocument(xrequest);
 
-			var result = _Manager.Propfind(userName, calendarName, request);
+			var result = await _Manager.Propfind(depth, userName, calendarName, request);
 
 			return new ContentResult
 			{

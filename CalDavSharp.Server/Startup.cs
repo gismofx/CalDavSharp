@@ -16,6 +16,7 @@ using CalDavSharp.Server.Services;
 using DapperRepository;
 using System.Data.SQLite;
 using CalDavSharp.Server.Models;
+using CalDavSharp.Server.Data;
 
 namespace CalDavSharp.Server
 {
@@ -35,7 +36,7 @@ namespace CalDavSharp.Server
             services.AddControllers().AddXmlSerializerFormatters();
             services.AddSwaggerGen(c =>
             {
-                c.SwaggerDoc("v1", new OpenApiInfo { Title = "CalDavServer_Play", Version = "v1" });
+                c.SwaggerDoc("v1", new OpenApiInfo { Title = "CalDavServer", Version = "v1" });
             });
 
             var connectionString = Configuration.GetConnectionString("DefaultConnection");
@@ -46,6 +47,7 @@ namespace CalDavSharp.Server
             services.AddTransientRepository<Event>()
                 .AddTransientRepository<Calendar>();
 
+            services.AddSingleton<CalendarRepository>();
             services.AddSingleton<CalDavParser>();
             services.AddTransient<CalDavManager>();
 
