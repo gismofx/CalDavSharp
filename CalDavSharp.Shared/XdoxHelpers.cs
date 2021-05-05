@@ -11,7 +11,7 @@ namespace CalDavSharp.Shared
     {
         public static XElement Element(this XNamespace ns, string name, params object[] inner)
         {
-            return new XElement(ns.GetName(name), inner);
+            return new XElement(ns+name, inner);
         }
 
         public static XElement Element(this XName name, params object[] inner)

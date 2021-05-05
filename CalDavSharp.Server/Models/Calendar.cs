@@ -7,13 +7,17 @@ using Dapper.Contrib.Extensions;
 
 namespace CalDavSharp.Server.Models
 {
+    [Table("Calendar")]
     public class Calendar
     {
         [ExplicitKey]
-        public string Id { get; set; }
-        public string Owner { get; set; }
-        public string Name { get; set; }
+        public string CalendarId { get; set; }
+        public string UserId { get; set; }
+        public string UserName { get; set; }
+        public string CalendarName { get; set; }
         public string Description { get; set; }
+
+        public string cTag { get; set; }
 
         [Write(false)]
         public virtual ICollection<Event> Events { get; set; }

@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 
-namespace CalDavServer_Play.Controllers
+namespace CalDavSharp.Server.Controllers
 {
     [ApiController]
     [Route("[controller]")]

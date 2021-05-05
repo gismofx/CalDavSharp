@@ -3,9 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.31129.286
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CalDavSharpServer", "CalDavSharp.Server\CalDavSharpServer.csproj", "{9D0F87D9-100F-4625-BBA3-3A532B64144D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CalDavSharp.Server", "CalDavSharp.Server\CalDavSharp.Server.csproj", "{9D0F87D9-100F-4625-BBA3-3A532B64144D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CalDavSharp.Shared", "CalDavSharp.Shared\CalDavSharp.Shared.csproj", "{1E8ABEEF-9B7A-4E85-A306-9254839441DF}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CalDavSharp.Shared", "CalDavSharp.Shared\CalDavSharp.Shared.csproj", "{1E8ABEEF-9B7A-4E85-A306-9254839441DF}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CaldavSharp.Testing", "CaldavSharp.Testing\CaldavSharp.Testing.csproj", "{CA0FEA59-D81C-4DD9-9DF9-E0F9A9E9F04C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,6 +23,10 @@ Global
 		{1E8ABEEF-9B7A-4E85-A306-9254839441DF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1E8ABEEF-9B7A-4E85-A306-9254839441DF}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1E8ABEEF-9B7A-4E85-A306-9254839441DF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CA0FEA59-D81C-4DD9-9DF9-E0F9A9E9F04C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CA0FEA59-D81C-4DD9-9DF9-E0F9A9E9F04C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CA0FEA59-D81C-4DD9-9DF9-E0F9A9E9F04C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CA0FEA59-D81C-4DD9-9DF9-E0F9A9E9F04C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

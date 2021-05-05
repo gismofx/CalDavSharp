@@ -17,6 +17,9 @@ using DapperRepository;
 using System.Data.SQLite;
 using CalDavSharp.Server.Models;
 using CalDavSharp.Server.Data;
+using LiteDB;
+using System.Xml.Linq;
+using System.Diagnostics;
 
 namespace CalDavSharp.Server
 {
@@ -51,6 +54,23 @@ namespace CalDavSharp.Server
             services.AddSingleton<CalDavParser>();
             services.AddTransient<CalDavManager>();
 
+            /* Try LiteDB as alternative to sqlite.. sticking with sqlite for now
+            var mapper = BsonMapper.Global;
+            mapper.Entity<Ical.Net.Calendar>()
+                .Id(x => x.ProductId);
+
+            mapper.Entity<Ical.Net.CalendarComponents.CalendarEvent>()
+                .Ignore(x => x.Parent);
+                
+            
+            using (var ldb = new LiteDatabase(@"PathTo\CalDavSharp.Server\MyData.db"))
+            {
+                var col = ldb.GetCollection<Ical.Net.CalendarComponents.CalendarEvent>("events");
+                col.InsertBulk(mycalendar.);
+
+            }
+            */
+            
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -60,7 +80,7 @@ namespace CalDavSharp.Server
             {
                 app.UseDeveloperExceptionPage();
                 app.UseSwagger();
-                app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "CalDavServer_Play v1"));
+                app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "CalDavServer v1"));
             }
 
             app.UseHttpsRedirection();
@@ -73,6 +93,23 @@ namespace CalDavSharp.Server
             {
                 endpoints.MapControllers();
             });
+
+            //for debugging
+            app.Use(async (context, next) =>
+            {
+                //get path
+                var path = context.Request.Path.ToString();
+                 Debug.WriteLine(path);
+                //when path == what you want,do something
+                if (path == "xxxx")
+                {
+                    
+                }
+                await next();
+            });
+            
+            
+
         }
     }
 }

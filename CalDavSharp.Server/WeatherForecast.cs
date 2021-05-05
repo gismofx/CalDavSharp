@@ -1,6 +1,6 @@
 using System;
 
-namespace CalDavServer_Play
+namespace CalDavSharp.Server
 {
     public class WeatherForecast
     {
