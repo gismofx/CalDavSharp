@@ -66,6 +66,16 @@ namespace CalDavSharp.Server.Data
             await _EventRepository.UpdateAsync(eventToUpdate);
         }
 
+        public async Task DeleteCalendarObject(string objectID)
+        {
+            using (var conn = _EventRepository.DbConnection)
+            {
+                var dynamicParams = new DynamicParameters();
+                dynamicParams.Add("ObjectID", objectID);
+                await conn.ExecuteAsync("DELETE FROM Event WHERE EventId=@ObjectId",dynamicParams);
+            }
+        }
+
         public async Task ImportIcalDotNetEvents(Calendar intoCalendar, Ical.Net.Calendar calendarToImport)
         {
             var s = new Ical.Net.Serialization.ComponentSerializer();

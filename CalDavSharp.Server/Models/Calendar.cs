@@ -19,6 +19,8 @@ namespace CalDavSharp.Server.Models
 
         public string cTag { get; set; }
 
+        public string ComponentSet { get; set; }
+
         [Write(false)]
         public virtual ICollection<Event> Events { get; set; }
         /*

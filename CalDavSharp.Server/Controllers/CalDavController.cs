@@ -11,6 +11,7 @@ using CalDavSharp.Server.Services;
 using System.Xml.Linq;
 using System.IO;
 using CalDavSharp.Shared;
+using NodaTime;
 
 namespace CalDavSharp.Server.Controllers
 {
@@ -31,51 +32,55 @@ namespace CalDavSharp.Server.Controllers
 			return File("~/index.html", "text/html");
 		}
 
-		/*
+		
 		[AcceptVerbs("OPTIONS")]
-		public async Task<IActionResult> Options([FromBody] XDocument xmlDoc)
+		[Route("calendars/{userName:alpha}")]
+		[Route("calendars/{userName:alpha}/{calendarName:alpha}")]
+		public async Task<IActionResult> Options([FromRoute] string userName, [FromRoute] string calendarName)
 		{
 			//var xmlDoc = GetRequestXml();
-			if (xmlDoc != null)
-			{
-				var request = xmlDoc.Root.Elements().FirstOrDefault();
-				switch (request.Name.LocalName.ToLower())
-				{
-					case "calendar-collection-set":
-						break;
-						//var repo = GetService<ICalendarRepository>();
-						//var calendars = repo.GetCalendars().ToArray();
-						/*
-						return new Result
-						{
-							Content =new XElement("options-response",
-								new XElement("calendar-collection-set",
-									calendars.Select(calendar =>
-									new XElement("href",
-										 new Uri(Request.Url, GetCalendarUrl(calendar.Name))
-										 ))
-							 )
-						 )
-						};
+			//if (xmlDoc != null)
+			//{
+			//	var request = xmlDoc.Root.Elements().FirstOrDefault();
+			//	switch (request.Name.LocalName.ToLower())
+			//	{
+			//		case "calendar-collection-set":
+			//			break;
+			//			//var repo = GetService<ICalendarRepository>();
+			//			//var calendars = repo.GetCalendars().ToArray();
+			//			/*
+			//			return new Result
+			//			{
+			//				Content =new XElement("options-response",
+			//					new XElement("calendar-collection-set",
+			//						calendars.Select(calendar =>
+			//						new XElement("href",
+			//							 new Uri(Request.Url, GetCalendarUrl(calendar.Name))
+			//							 ))
+			//				 )
+			//			 )
+			//			};
 						
-				}
-			}
+			//	}
+			//}
 		
 
-			var Headers = new Dictionary<string, string> {
-					{"Allow", "OPTIONS, PROPFIND, HEAD, GET, REPORT, PROPPATCH, PUT, DELETE, POST" }
-				};
-			return new ContentResult()
+			Response.Headers.Add("Allow", "OPTIONS, PROPFIND, HEAD, GET, REPORT, PROPPATCH, PUT, DELETE, POST");
+			//Request.Headers.Add("Allow" "PROPFIND, PROPPATCH, LOCK, UNLOCK, REPORT, ACL"")
+			return StatusCode(200);
+			
+			/*return new ContentResult()
 			{
 				StatusCode=200,
 				Content = "",
 				ContentType="text/xml"
 			};
+			*/
 
-			throw new NotImplementedException();
-			return null;
+			//throw new NotImplementedException();
+			//return null;
 		}
-		*/
+		
 
 		[AcceptVerbs("PROPFIND")]
 		[ApiExplorerSettings(IgnoreApi = true)]
@@ -86,10 +91,13 @@ namespace CalDavSharp.Server.Controllers
 												  [FromBody] XElement xrequest)
 		{
 			//throw new NotImplementedException();
+			/*
 			if (userName is null && calendarName is null)
 			{
 				return BadRequest();
 			}
+			*/
+
 			var headers = HttpContext.Request.Headers;
 			var depth = headers["Depth"].Count == 0 ? 0 : int.Parse(headers["Depth"]);
 			var request = new XDocument(xrequest);
@@ -117,7 +125,7 @@ namespace CalDavSharp.Server.Controllers
 				public async Task<ActionResult<string>> Report([FromRoute] string userName, 
 															   [FromRoute] string calendarName,
 															   [FromRoute] string icsFileName,
-															   [FromBody] XElement request)
+															   [FromBody] XElement request=null)
 				{
 					//throw new NotImplementedException();
 					//return await Task.FromResult(new ActionResult<string>(userName));
@@ -199,8 +207,18 @@ namespace CalDavSharp.Server.Controllers
 		
 
 		[HttpDelete]
-		public async Task<IActionResult> Delete()
+		[Route("calendars/{userName:alpha}/{calendarName:alpha}/{icsFileName}")]
+		public async Task<IActionResult> Delete([FromRoute] string userName,
+										    	[FromRoute] string calendarName,
+											    [FromRoute] string icsFileName)
 		{
+			if (HttpContext.Request.Headers.TryGetValue("If-Match", out var ifMatch))
+			{
+				var ctag = await _Manager.DeleteObject(userName, calendarName, icsFileName);
+				Response.Headers.Add("CTag", ctag);
+				return StatusCode(204);
+			}
+
 			throw new NotImplementedException();
 			return null;
 		}
@@ -231,6 +249,7 @@ namespace CalDavSharp.Server.Controllers
 				body = await reader.ReadToEndAsync();
 			}
 
+			
 			if (HttpContext.Request.Headers.TryGetValue("If-Match", out var ifMatch))
 			{
 				var etag = await _Manager.UpdateEvent(userName, calendarName, fileName, body);
@@ -239,8 +258,9 @@ namespace CalDavSharp.Server.Controllers
 			}
 			else
 			{
-				await _Manager.PutEvent(userName, calendarName, fileName, body);
-				return StatusCode(201, "Created");
+				var etag = await _Manager.PutEvent(userName, calendarName, fileName, body);
+				Response.Headers.Add("ETag", etag);
+				return StatusCode(201);
 			}
 			
 
@@ -269,6 +289,7 @@ namespace CalDavSharp.Server.Controllers
 		}
 
 		[HttpGet]
+		[Route("/salendars/**.")]
         public async Task<IActionResult> Get()
         {
             throw new NotImplementedException();

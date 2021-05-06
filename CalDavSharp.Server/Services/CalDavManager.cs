@@ -13,6 +13,7 @@ using CalDavSharp.Shared;
 using CalDavSharp.Server.Data;
 using Microsoft.AspNetCore.Mvc;
 using System.Reflection.Metadata;
+using System.Runtime.InteropServices.ComTypes;
 //using Ical.Net;
 
 namespace CalDavSharp.Server.Services
@@ -51,12 +52,17 @@ namespace CalDavSharp.Server.Services
             CalendarUrl = $"{UserUrl}/{calendarName}";
             var props = xDoc.Descendants(XName.Get("prop", xNSD.NamespaceName)).FirstOrDefault().Elements();// GetName("prop")).FirstOrDefault().Elements()
 
-            var calendar = await _CalendarRepo.GetCalendarByUserandNameAsync(userName, calendarName);
-            if (calendar is null)
+            Calendar calendar = null;
+            if (userName is not null && calendarName is not null)
             {
-                //@Todo: create null response 
-                return null;
+                calendar = await _CalendarRepo.GetCalendarByUserandNameAsync(userName, calendarName);
+                if (calendar is null)
+                {
+                    //@Todo: create null response 
+                    return null;
+                }
             }
+                    
 
             var allprop = props.Elements(xDav.GetName("allprops")).Any();
             //var hrefName = xDav.GetName("href");
@@ -181,12 +187,14 @@ namespace CalDavSharp.Server.Services
                          .Where(x => x != null)
                          .ToArray()
                             .Select(item => xDav.Element("response",
-                                hrefName.Element(UserUrl/*GetCalendarObjectUrl(calendar.ID, item.UID)*/),
+                                hrefName.Element($"{CalendarUrl}/{item.EventId}"/*GetCalendarObjectUrl(calendar.ID, item.UID)*/),
                                     xDav.Element("propstat",
                                         xDav.Element("status", "HTTP/1.1 200 OK"),
+                                        xDav.Element("prop",
                                         resourceType == null ? null : resourceTypeName.Element(),
                                         (getContentType == null ? null : getContentTypeName.Element("text/calendar; component=v" + item.GetType().Name.ToLower())),
                                         getetag == null ? null : getetagName.Element("\"" + XdoxHelpers.FormatDate(item.LastModifiedUtc) + "\"")
+                                        )
                                     )
                                 )
                             )
@@ -274,7 +282,7 @@ namespace CalDavSharp.Server.Services
             }
             return null;
         }
-        public async Task PutEvent(string user, string calendarName, string fileName, string eventText)
+        public async Task<string> PutEvent(string user, string calendarName, string fileName, string eventText)
         {
             fileName = fileName.Replace(".ics", "", StringComparison.OrdinalIgnoreCase);
             var cal = Ical.Net.Calendar.Load(eventText);
@@ -286,11 +294,27 @@ namespace CalDavSharp.Server.Services
                 e.ETag = DateTime.UtcNow.GetHashCode().ToString();
                 await _CalendarRepo.InsertEvent(e);
                 var ctag = await _CalendarRepo.UpdateCalendarCTag(calendarId);
+                return e.ETag;
             }
             else
             {
                 throw new Exception("More than one event in PUT request");
             }
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="userName"></param>
+        /// <param name="calendarName"></param>
+        /// <param name="eventFileName"></param>
+        /// <returns>Updated CTag for calendar</returns>
+        public async Task<string> DeleteObject(string userName, string calendarName, string eventFileName)
+        {
+            eventFileName = eventFileName.Replace(".ics", "", StringComparison.OrdinalIgnoreCase);
+            await _CalendarRepo.DeleteCalendarObject(eventFileName);
+            var cId = await _CalendarRepo.GetCalendarIdByUserandNameAsync(userName, calendarName);
+            return await _CalendarRepo.UpdateCalendarCTag(cId);
         }
 
         private XElement GetProperty(CaldavProperty caldavProperty, bool allprop, Calendar calendar)
@@ -357,7 +381,16 @@ namespace CalDavSharp.Server.Services
                     break;
 
                 case "supported-calendar-component-set":
-                    /*
+                    outputElement = xCalDav.GetName("supported-calendar-component-set").Element(
+                        xCalDav.Element("comp", new XAttribute("name", "VEVENT")),
+                        xCalDav.Element("comp", new XAttribute("name", "VTODO")));
+                    
+                    /*var supportedComponentsName = xCalDav.GetName("supported-calendar-component-set");
+                    var supportedComponents = !allprop && !props.Any(x => x.Name == supportedComponentsName) ? null :
+                        new[]{
+                    xCalDav.Element("comp", new XAttribute("name", "VEVENT")),
+                    xCalDav.Element("comp", new XAttribute("name", "VTODO"))
+                        };
                     outputElement = new[]{
                     xCalDav.Element("comp", new XAttribute("name", "VEVENT")),
                     xCalDav.Element("comp", new XAttribute("name", "VTODO"))

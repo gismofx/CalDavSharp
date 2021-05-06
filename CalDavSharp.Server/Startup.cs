@@ -36,7 +36,8 @@ namespace CalDavSharp.Server
         public void ConfigureServices(IServiceCollection services)
         {
 
-            services.AddControllers().AddXmlSerializerFormatters();
+            services.AddControllers(options=>
+            { options.MaxValidationDepth = 9999; }).AddXmlSerializerFormatters();
             services.AddSwaggerGen(c =>
             {
                 c.SwaggerDoc("v1", new OpenApiInfo { Title = "CalDavServer", Version = "v1" });
@@ -99,11 +100,14 @@ namespace CalDavSharp.Server
             {
                 //get path
                 var path = context.Request.Path.ToString();
-                 Debug.WriteLine(path);
+                Debug.WriteLine("*****intercepted path*****");
+                Debug.WriteLine(path);
+                Debug.WriteLine("**************************");
                 //when path == what you want,do something
+
                 if (path == "xxxx")
                 {
-                    
+                   
                 }
                 await next();
             });
