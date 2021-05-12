@@ -124,7 +124,7 @@ namespace CalDavSharp.Server.Data
             {
                 var dynamicParams = new DynamicParameters();
                 dynamicParams.Add("ctag", hash);
-                await conn.ExecuteAsync("Update Calendar Set cTag = @ctag", dynamicParams);
+                await conn.ExecuteAsync("Update Calendar Set CTag = @ctag", dynamicParams);
             }
             return hash;
         }

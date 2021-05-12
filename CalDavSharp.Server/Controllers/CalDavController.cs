@@ -12,6 +12,7 @@ using System.Xml.Linq;
 using System.IO;
 using CalDavSharp.Shared;
 using NodaTime;
+using DapperIdentity.Controllers.BasicAuth;
 
 namespace CalDavSharp.Server.Controllers
 {
@@ -27,12 +28,14 @@ namespace CalDavSharp.Server.Controllers
 			_Manager = manager;
 		}
 
+		[ApiExplorerSettings(IgnoreApi = true)]
 		public IActionResult Spa()
 		{
 			return File("~/index.html", "text/html");
 		}
 
-		
+
+		[BasicAuth("CalDAV Server")]
 		[AcceptVerbs("OPTIONS")]
 		[Route("calendars/{userName:alpha}")]
 		[Route("calendars/{userName:alpha}/{calendarName:alpha}")]
@@ -81,7 +84,7 @@ namespace CalDavSharp.Server.Controllers
 			//return null;
 		}
 		
-
+		[BasicAuth("CalDAV Server")]
 		[AcceptVerbs("PROPFIND")]
 		[ApiExplorerSettings(IgnoreApi = true)]
 		[Route("calendars")]
@@ -90,14 +93,6 @@ namespace CalDavSharp.Server.Controllers
 												  [FromRoute] string calendarName,
 												  [FromBody] XElement xrequest)
 		{
-			//throw new NotImplementedException();
-			/*
-			if (userName is null && calendarName is null)
-			{
-				return BadRequest();
-			}
-			*/
-
 			var headers = HttpContext.Request.Headers;
 			var depth = headers["Depth"].Count == 0 ? 0 : int.Parse(headers["Depth"]);
 			var request = new XDocument(xrequest);
@@ -116,26 +111,26 @@ namespace CalDavSharp.Server.Controllers
 
 		}
 
-		
-				//this one works
-				[AcceptVerbs("REPORT")]
-				[ApiExplorerSettings(IgnoreApi = true)]
-				[Route("calendars/{userName:alpha}/{calendarName:alpha}")]
-				[Route("calendars/{userName:alpha}/{calendarName:alpha}/{icsFileName}")]//[FromRoute]
-				public async Task<ActionResult<string>> Report([FromRoute] string userName, 
-															   [FromRoute] string calendarName,
-															   [FromRoute] string icsFileName,
-															   [FromBody] XElement request=null)
-				{
-					//throw new NotImplementedException();
-					//return await Task.FromResult(new ActionResult<string>(userName));
-					//request.PreserveWhitespace = false;
-					if (request is null)
-					{
-						return null;
-					}
-			//string icsFile=null;
-					var result = await _Manager.Report(userName, calendarName, icsFileName, request);
+
+		[BasicAuth("CalDAV Server")]
+		[AcceptVerbs("REPORT")]
+		[ApiExplorerSettings(IgnoreApi = true)]
+		[Route("calendars/{userName:alpha}/{calendarName:alpha}")]
+		[Route("calendars/{userName:alpha}/{calendarName:alpha}/{icsFileName}")]//[FromRoute]
+		public async Task<ActionResult<string>> Report([FromRoute] string userName, 
+														[FromRoute] string calendarName,
+														[FromRoute] string icsFileName,
+														[FromBody] XElement request=null)
+		{
+			//throw new NotImplementedException();
+			//return await Task.FromResult(new ActionResult<string>(userName));
+			//request.PreserveWhitespace = false;
+			if (request is null)
+			{
+				return null;
+			}
+	//string icsFile=null;
+			var result = await _Manager.Report(userName, calendarName, icsFileName, request);
 
 
 			//var x = CalendarRepository.FindCalendar
@@ -204,8 +199,8 @@ namespace CalDavSharp.Server.Controllers
 			};
 			//return result.ToString();
 				}
-		
 
+		[BasicAuth("CalDAV Server")]
 		[HttpDelete]
 		[Route("calendars/{userName:alpha}/{calendarName:alpha}/{icsFileName}")]
 		public async Task<IActionResult> Delete([FromRoute] string userName,
@@ -223,16 +218,17 @@ namespace CalDavSharp.Server.Controllers
 			return null;
 		}
 
-/*
-		[Route("calendars/{userName}/{calendarName}/{icsFile}")]
-		public async Task<ActionResult<string>> Put(string userName, string calendarName, string icsFile, [FromBody] string bodyContent)
-		{
-			throw new NotImplementedException();
-			return null;
-		}
-*/
-		
+		/*
+				[Route("calendars/{userName}/{calendarName}/{icsFile}")]
+				public async Task<ActionResult<string>> Put(string userName, string calendarName, string icsFile, [FromBody] string bodyContent)
+				{
+					throw new NotImplementedException();
+					return null;
+				}
+		*/
+
 		//[Route("calendars/{userName:alpha}/{calendarName:alpha}/{fileName}")]
+		[BasicAuth("CalDAV Server")]
 		[HttpPut]
 		[Consumes("text/calendar")]
 		[Route("calendars/{userName}/{calendarName}/{fileName}")]
@@ -240,7 +236,7 @@ namespace CalDavSharp.Server.Controllers
 		public async Task<IActionResult> Put([FromRoute] string userName,
 											 [FromRoute] string calendarName,
 											 [FromRoute] string fileName)
-			                                 //[FromBody] string ics)
+		//[FromBody] string ics)
 		{
 			var request = HttpContext.Request;
 			string body;// = await Request.  Body.ToString();// Content.ReadAsStringAsync();
@@ -249,7 +245,7 @@ namespace CalDavSharp.Server.Controllers
 				body = await reader.ReadToEndAsync();
 			}
 
-			
+
 			if (HttpContext.Request.Headers.TryGetValue("If-Match", out var ifMatch))
 			{
 				var etag = await _Manager.UpdateEvent(userName, calendarName, fileName, body);
@@ -262,11 +258,8 @@ namespace CalDavSharp.Server.Controllers
 				Response.Headers.Add("ETag", etag);
 				return StatusCode(201);
 			}
-			
-
-			return StatusCode(201,"Created");
 		}
-		
+
 		//for debugging
 		/*
 		[Consumes("text/calendar")]
@@ -280,6 +273,7 @@ namespace CalDavSharp.Server.Controllers
 		}
 		*/
 
+		[BasicAuth("CalDAV Server")]
 		[AcceptVerbs("MKCALENDAR")]
 		[ApiExplorerSettings(IgnoreApi = true)]
 		public async Task<IActionResult> MkCalendar()
@@ -288,11 +282,12 @@ namespace CalDavSharp.Server.Controllers
 			return null;
 		}
 
+		[BasicAuth("CalDAV Server")]
 		[HttpGet]
-		[Route("/salendars/**.")]
+		[Route("/calendars/**.")]
         public async Task<IActionResult> Get()
         {
-            throw new NotImplementedException();
+			throw new NotImplementedException();
             return null;
         }
 

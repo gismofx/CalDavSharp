@@ -20,6 +20,7 @@ using CalDavSharp.Server.Data;
 using LiteDB;
 using System.Xml.Linq;
 using System.Diagnostics;
+using DapperIdentity.Services;
 
 namespace CalDavSharp.Server
 {
@@ -38,6 +39,7 @@ namespace CalDavSharp.Server
 
             services.AddControllers(options=>
             { options.MaxValidationDepth = 9999; }).AddXmlSerializerFormatters();
+            
             services.AddSwaggerGen(c =>
             {
                 c.SwaggerDoc("v1", new OpenApiInfo { Title = "CalDavServer", Version = "v1" });
@@ -52,8 +54,11 @@ namespace CalDavSharp.Server
                 .AddTransientRepository<Calendar>();
 
             services.AddSingleton<CalendarRepository>();
-            services.AddSingleton<CalDavParser>();
             services.AddTransient<CalDavManager>();
+
+            services.AddBasicAuthController();
+
+
 
             /* Try LiteDB as alternative to sqlite.. sticking with sqlite for now
             var mapper = BsonMapper.Global;
@@ -88,6 +93,7 @@ namespace CalDavSharp.Server
 
             app.UseRouting();
 
+            app.UseAuthentication();
             app.UseAuthorization();
 
             app.UseEndpoints(endpoints =>

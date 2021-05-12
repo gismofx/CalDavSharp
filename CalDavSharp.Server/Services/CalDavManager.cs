@@ -20,7 +20,6 @@ namespace CalDavSharp.Server.Services
 {
     public class CalDavManager
     {
-        private CalDavParser _Parser;
         private XNamespace xNSC;
         private XNamespace xNSD;
         private CalendarRepository _CalendarRepo;
@@ -34,11 +33,10 @@ namespace CalDavSharp.Server.Services
         private string UserUrl;
         private string CalendarUrl;
 
-        public CalDavManager(CalendarRepository calendarRepository, CalDavParser parser )
+        public CalDavManager(CalendarRepository calendarRepository)
         {
             
             _CalendarRepo = calendarRepository;
-            _Parser = parser;
 
             xNSD = "DAV:";
             xNSC = "urn:ietf:params:xml:ns:caldav";

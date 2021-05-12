@@ -9,7 +9,7 @@
     <PackageReference Include="Dapper" Version="2.0.90" />
     <PackageReference Include="Ical.Net" Version="4.2.0" />
     <PackageReference Include="System.Data.SQLite.Core" Version="1.0.113.7" />
-    <PackageReference Include="TheDapperRepository" Version="1.2.0-PreRelease3" />
+    <PackageReference Include="TheDapperRepository" Version="1.2.0" />
   </ItemGroup>
 
   <ItemGroup>
