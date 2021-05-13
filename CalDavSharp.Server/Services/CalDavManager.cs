@@ -2,47 +2,57 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using DapperRepository;
-using CalDavSharp.Server.Models;
-using System.Xml;
-using System.Diagnostics;
 using System.Xml.Linq;
-using static System.Net.WebRequestMethods;
-using CalDavSharp.Shared;
-//using System.Globalization;
 using CalDavSharp.Server.Data;
-using Microsoft.AspNetCore.Mvc;
-using System.Reflection.Metadata;
-using System.Runtime.InteropServices.ComTypes;
-//using Ical.Net;
+using CalDavSharp.Server.Models;
+using CalDavSharp.Shared;
 
 namespace CalDavSharp.Server.Services
 {
     public class CalDavManager
     {
-        private XNamespace xNSC;
-        private XNamespace xNSD;
-        private CalendarRepository _CalendarRepo;
-
-        public static readonly XNamespace xDav = XNamespace.Get("DAV:");
-        public static readonly XNamespace xCalDav = XNamespace.Get("urn:ietf:params:xml:ns:caldav");
         public static readonly XNamespace xApple = XNamespace.Get("http://apple.com/ns/ical/");
+        public static readonly XNamespace xCalDav = XNamespace.Get("urn:ietf:params:xml:ns:caldav");
         public static readonly XNamespace xCS = XNamespace.Get("http://calendarserver.org/ns/");
-
+        public static readonly XNamespace xDav = XNamespace.Get("DAV:");
         private readonly XName hrefName;
-        private string UserUrl;
+        private CalendarRepository _CalendarRepo;
         private string CalendarUrl;
-
+        private string UserUrl;
+        private readonly XNamespace xNSC;
+        private readonly XNamespace xNSD;
+        
         public CalDavManager(CalendarRepository calendarRepository)
         {
-            
             _CalendarRepo = calendarRepository;
-
             xNSD = "DAV:";
             xNSC = "urn:ietf:params:xml:ns:caldav";
             hrefName = xDav.GetName("href");
         }
 
+        /// <summary>
+        /// Delete an Event
+        /// </summary>
+        /// <param name="userName"></param>
+        /// <param name="calendarName"></param>
+        /// <param name="eventFileName"></param>
+        /// <returns>Updated CTag for calendar</returns>
+        public async Task<string> DeleteObject(string userName, string calendarName, string eventFileName)
+        {
+            eventFileName = eventFileName.Replace(".ics", "", StringComparison.OrdinalIgnoreCase);
+            await _CalendarRepo.DeleteCalendarObject(eventFileName);
+            var cId = await _CalendarRepo.GetCalendarIdByUserandNameAsync(userName, calendarName);
+            return await _CalendarRepo.UpdateCalendarCTag(cId);
+        }
+
+        /// <summary>
+        /// Return results from a PROPFIND Request
+        /// </summary>
+        /// <param name="depth"></param>
+        /// <param name="userName"></param>
+        /// <param name="calendarName"></param>
+        /// <param name="xDoc"></param>
+        /// <returns></returns>
         public async Task<XDocument> Propfind(int depth, string userName, string calendarName, XDocument xDoc)
         {
             //var result = _Parser.ParsePropfind(xmlDoc);
@@ -264,22 +274,14 @@ namespace CalDavSharp.Server.Services
 
         }
 
-        public async Task<string> UpdateEvent(string user, string calendarName, string fileName, string eventText)
-        {
-            fileName = fileName.Replace(".ics", "", StringComparison.OrdinalIgnoreCase);
-            var cal = Ical.Net.Calendar.Load(eventText);
-            if (cal.Events.Count == 1)
-            {
-                var calendarId = await _CalendarRepo.GetCalendarIdByUserandNameAsync(user, calendarName);
-                var icalEvent = cal.Events.First();
-                var e = icalEvent.ToCalDavEvent(fileName, calendarId, eventText);
-                e.ETag = DateTime.UtcNow.GetHashCode().ToString();
-                await _CalendarRepo.UpdateEvent(e);
-                var ctag = await _CalendarRepo.UpdateCalendarCTag(calendarId);
-                return e.ETag;
-            }
-            return null;
-        }
+        /// <summary>
+        /// Insert and NEW Event into database
+        /// </summary>
+        /// <param name="user"></param>
+        /// <param name="calendarName"></param>
+        /// <param name="fileName"></param>
+        /// <param name="eventText"></param>
+        /// <returns>ETag of event</returns>
         public async Task<string> PutEvent(string user, string calendarName, string fileName, string eventText)
         {
             fileName = fileName.Replace(".ics", "", StringComparison.OrdinalIgnoreCase);
@@ -301,20 +303,138 @@ namespace CalDavSharp.Server.Services
         }
 
         /// <summary>
-        /// 
+        /// Report Request
         /// </summary>
         /// <param name="userName"></param>
         /// <param name="calendarName"></param>
-        /// <param name="eventFileName"></param>
-        /// <returns>Updated CTag for calendar</returns>
-        public async Task<string> DeleteObject(string userName, string calendarName, string eventFileName)
+        /// <param name="xDoc"></param>
+        /// <returns>XDocument with REPORT results</returns>
+        public async Task<XDocument> Report(string userName, string calendarName, string icsFile, XElement request)
         {
-            eventFileName = eventFileName.Replace(".ics", "", StringComparison.OrdinalIgnoreCase);
-            await _CalendarRepo.DeleteCalendarObject(eventFileName);
-            var cId = await _CalendarRepo.GetCalendarIdByUserandNameAsync(userName, calendarName);
-            return await _CalendarRepo.UpdateCalendarCTag(cId);
+            var calendar = await _CalendarRepo.GetCalendarByUserandNameAsync(userName, calendarName);
+            var filter = request.Element(xCalDav.GetName("filter"));
+            var props = request.Elements(xDav.GetName("prop")).FirstOrDefault().Elements();
+            //var result = _Parser.ParseReport(xmlDoc);
+            var hrefs = request.Descendants(xDav.GetName("href")).Select(x => x.Value).ToArray();
+            string baseUrl = $"/CalDav/Calendars/{userName}/{calendarName}/";
+            //return null;
+
+
+            /*
+            var xdoc = GetRequestXml();
+			if (xdoc == null) return new Result();
+
+			var repo = GetService<ICalendarRepository>();
+			var calendar = repo.GetCalendarByID(id);
+
+			var request = xdoc.Root.Elements().FirstOrDefault();
+			var filterElm = request.Element(CalDav.Common.xCalDav.GetName("filter"));
+			var filter = filterElm == null ? null : new Filter(filterElm);
+			var hrefName = CalDav.Common.xDav.GetName("href");
+			var hrefs = xdoc.Descendants(hrefName).Select(x => x.Value).ToArray();
+			var getetagName = CalDav.Common.xDav.GetName("getetag");
+			var getetag = xdoc.Descendants(getetagName).FirstOrDefault();
+			var calendarDataName = CalDav.Common.xCalDav.GetName("calendar-data");
+			var calendarData = xdoc.Descendants(calendarDataName).FirstOrDefault();
+
+			var ownerName = Common.xDav.GetName("owner");
+			var displaynameName = Common.xDav.GetName("displayname");
+            */
+            IQueryable<Event> result = null;
+            if (filter != null)
+            {
+                result = await _CalendarRepo.GetObjectsByFilter(calendar.CalendarId, filter);
+            }
+            else if (hrefs.Any())
+            {
+                //var e1 = await _CalendarRepo.GetObjectByUID(calendar.CalendarId, GetObjectUIDFromPath(hrefs.First()));
+                var foundEvents = await Task.WhenAll(hrefs.Select(x => _CalendarRepo.GetObjectByUID(calendar.CalendarId, GetObjectUIDFromPath(x))).ToList());
+                result = foundEvents.Where(x => x != null).AsQueryable();
+                //await _CalendarRepo.GetObjectByUID(calendar.CalendarId, GetObjectUIDFromPath(x));
+
+                //IQueryable<Event> foundEvents = await Task.WhenAll(hrefs.Select(x => _CalendarRepo.GetObjectByUID(calendar.CalendarId, GetObjectUIDFromPath(x))));
+                //result = hrefs.Select(async x => await _CalendarRepo.GetObjectByUID(calendar.CalendarId, GetObjectUIDFromPath(x))
+                //     .Where(x => x != null)
+                //     .AsQueryable();
+            }
+            if (result is not null)
+            {
+                var e = new XElement(
+                    xDav.Element("multistatus", new XAttribute(XNamespace.Xmlns + "D", xDav.NamespaceName),
+                                                    new XAttribute(XNamespace.Xmlns + "C", xCalDav.NamespaceName),
+                                                    new XAttribute(XNamespace.Xmlns + "CS", xCS.NamespaceName),
+                                result.Select(r =>
+                                    xDav.Element("response",
+                                        xDav.Element("href", new Uri(baseUrl + r.EventId + ".ics", UriKind.Relative)),
+                                        xDav.Element("propstat",
+                                        xDav.Element("status", "HTTP/1.1 200 OK"),
+                                        xDav.Element("prop",
+                                            xDav.Element("getetag", r.LastModifiedUtc.GetHashCode()),
+                                            xCalDav.Element("calendar-data", r.ICS)
+                                            )
+                                        )
+                                        )
+                                    )
+                                )
+                    );
+                return new XDocument(e);
+            }
+            return null;
+
+
+            //(getetag == null ? null : CalDav.Common.xDav.Element("getetag", "\"" + Common.FormatDate(r.LastModified) + "\"")),
+            //(calendarData == null ? null : CalDav.Common.xCalDav.Element("calendar-data",
+            //                ToString(r)
+            //                )
+            //                )); 
+            //xDav.Element("multistatus", new XElement("multistatus", new XAttribute(XNamespace.Xmlns + "D", xDav.NamespaceName),
+            //                                new XAttribute(XNamespace.Xmlns + "C", xCalDav.NamespaceName),
+            //                                new XAttribute(XNamespace.Xmlns + "CS", xCS.NamespaceName),
+            //xDav.Element("response",
+            //xDav.Element("href", UserUrl /*Request.RawUrl*/),
+            //xDav.Element("propstat",
+            //            xDav.Element("status", "HTTP/1.1 200 OK"),
+            //            xDav.Element("prop",
+
         }
 
+        /// <summary>
+        /// Update an existing event
+        /// </summary>
+        /// <param name="user"></param>
+        /// <param name="calendarName"></param>
+        /// <param name="fileName"></param>
+        /// <param name="eventText"></param>
+        /// <returns>ETag of event that was changed</returns>
+        public async Task<string> UpdateEvent(string user, string calendarName, string fileName, string eventText)
+        {
+            fileName = fileName.Replace(".ics", "", StringComparison.OrdinalIgnoreCase);
+            var cal = Ical.Net.Calendar.Load(eventText);
+            if (cal.Events.Count == 1)
+            {
+                var calendarId = await _CalendarRepo.GetCalendarIdByUserandNameAsync(user, calendarName);
+                var icalEvent = cal.Events.First();
+                var e = icalEvent.ToCalDavEvent(fileName, calendarId, eventText);
+                e.ETag = DateTime.UtcNow.GetHashCode().ToString();
+                await _CalendarRepo.UpdateEvent(e);
+                var ctag = await _CalendarRepo.UpdateCalendarCTag(calendarId);
+                return e.ETag;
+            }
+            return null;
+        }
+        
+        private string GetObjectUIDFromPath(string path)
+        {
+            return path.Split("/").Last().Replace(".ics", "", StringComparison.OrdinalIgnoreCase);
+        }
+
+        /// <summary>
+        /// Internal Method to retrieve CalDav/WebDav Properties
+        /// </summary>
+        /// <param name="caldavProperty"></param>
+        /// <param name="allprop"></param>
+        /// <param name="calendar"></param>
+        /// <returns>An XElement with the CalDav property</returns>
         private XElement GetProperty(CaldavProperty caldavProperty, bool allprop, Calendar calendar)
         {
             XElement outputElement = null;
@@ -422,7 +542,7 @@ namespace CalDavSharp.Server.Services
 
         //@Todo: Add logic for return code
         /// <summary>
-        /// 
+        /// Status Code Formatted for Multi-Response
         /// </summary>
         /// <param name="ns"></param>
         /// <returns></returns>
@@ -430,103 +550,7 @@ namespace CalDavSharp.Server.Services
         {
             return new XElement(ns + "status", "HTTP/1.1 200 OK");
         }
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="userName"></param>
-        /// <param name="calendarName"></param>
-        /// <param name="xDoc"></param>
-        /// <returns></returns>
-        public async Task<XDocument> Report(string userName, string calendarName, string icsFile, XElement request)
-        {
-            var calendar = await _CalendarRepo.GetCalendarByUserandNameAsync(userName, calendarName);
-            var filter = request.Element(xCalDav.GetName("filter"));
-            var props = request.Elements(xDav.GetName("prop")).FirstOrDefault().Elements();
-            //var result = _Parser.ParseReport(xmlDoc);
-            var hrefs = request.Descendants(xDav.GetName("href")).Select(x => x.Value).ToArray();
-            string baseUrl = $"/CalDav/Calendars/{userName}/{calendarName}/";
-            //return null;
-
-
-            /*
-            var xdoc = GetRequestXml();
-			if (xdoc == null) return new Result();
-
-			var repo = GetService<ICalendarRepository>();
-			var calendar = repo.GetCalendarByID(id);
-
-			var request = xdoc.Root.Elements().FirstOrDefault();
-			var filterElm = request.Element(CalDav.Common.xCalDav.GetName("filter"));
-			var filter = filterElm == null ? null : new Filter(filterElm);
-			var hrefName = CalDav.Common.xDav.GetName("href");
-			var hrefs = xdoc.Descendants(hrefName).Select(x => x.Value).ToArray();
-			var getetagName = CalDav.Common.xDav.GetName("getetag");
-			var getetag = xdoc.Descendants(getetagName).FirstOrDefault();
-			var calendarDataName = CalDav.Common.xCalDav.GetName("calendar-data");
-			var calendarData = xdoc.Descendants(calendarDataName).FirstOrDefault();
-
-			var ownerName = Common.xDav.GetName("owner");
-			var displaynameName = Common.xDav.GetName("displayname");
-            */
-			IQueryable<Event> result = null;
-            if (filter != null)
-            { 
-                result = await _CalendarRepo.GetObjectsByFilter(calendar.CalendarId, filter);
-            }
-            else if (hrefs.Any())
-            {
-                //var e1 = await _CalendarRepo.GetObjectByUID(calendar.CalendarId, GetObjectUIDFromPath(hrefs.First()));
-                var foundEvents=await Task.WhenAll( hrefs.Select(x => _CalendarRepo.GetObjectByUID(calendar.CalendarId, GetObjectUIDFromPath(x))).ToList());
-                result = foundEvents.Where(x => x != null).AsQueryable();
-                //await _CalendarRepo.GetObjectByUID(calendar.CalendarId, GetObjectUIDFromPath(x));
-                
-                //IQueryable<Event> foundEvents = await Task.WhenAll(hrefs.Select(x => _CalendarRepo.GetObjectByUID(calendar.CalendarId, GetObjectUIDFromPath(x))));
-                //result = hrefs.Select(async x => await _CalendarRepo.GetObjectByUID(calendar.CalendarId, GetObjectUIDFromPath(x))
-                //     .Where(x => x != null)
-                //     .AsQueryable();
-            }
-            if (result is not null)
-            {
-                var e = new XElement(
-                    xDav.Element("multistatus", new XAttribute(XNamespace.Xmlns + "D", xDav.NamespaceName),
-                                                    new XAttribute(XNamespace.Xmlns + "C", xCalDav.NamespaceName),
-                                                    new XAttribute(XNamespace.Xmlns + "CS", xCS.NamespaceName),
-                                result.Select(r =>
-                                    xDav.Element("response",
-                                        xDav.Element("href", new Uri(baseUrl + r.EventId + ".ics",UriKind.Relative)),
-                                        xDav.Element("propstat",
-                                        xDav.Element("status", "HTTP/1.1 200 OK"),
-                                        xDav.Element("prop",
-                                            xDav.Element("getetag", r.LastModifiedUtc.GetHashCode()),
-                                            xCalDav.Element("calendar-data", r.ICS)
-                                            )
-                                        )
-                                        )
-                                    )
-                                )
-                    );
-                return new XDocument(e);
-            }
-            return null;
-
-                
-                    //(getetag == null ? null : CalDav.Common.xDav.Element("getetag", "\"" + Common.FormatDate(r.LastModified) + "\"")),
-                    //(calendarData == null ? null : CalDav.Common.xCalDav.Element("calendar-data",
-                    //                ToString(r)
-                    //                )
-                    //                )); 
-                    //xDav.Element("multistatus", new XElement("multistatus", new XAttribute(XNamespace.Xmlns + "D", xDav.NamespaceName),
-                    //                                new XAttribute(XNamespace.Xmlns + "C", xCalDav.NamespaceName),
-                    //                                new XAttribute(XNamespace.Xmlns + "CS", xCS.NamespaceName),
-                    //xDav.Element("response",
-                    //xDav.Element("href", UserUrl /*Request.RawUrl*/),
-                    //xDav.Element("propstat",
-                    //            xDav.Element("status", "HTTP/1.1 200 OK"),
-                    //            xDav.Element("prop",
-                
-        }
-
-
+        
         //         if (result != null) {
         //	return new Result {
         //		Status = (System.Net.HttpStatusCode)207,
@@ -555,11 +579,6 @@ namespace CalDavSharp.Server.Services
             }
         };
         */
-
-        private string GetObjectUIDFromPath(string path)
-        {
-            return path.Split("/").Last().Replace(".ics", "", StringComparison.OrdinalIgnoreCase);
-        }
     }
 }
 

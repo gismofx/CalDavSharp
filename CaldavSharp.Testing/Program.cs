@@ -41,7 +41,7 @@ namespace CalDavSharp.Testing
             var repo1 = new Repository<CalDavSharp.Server.Models.Calendar>(conn);
             var repo2 = new Repository<Event>(new SQLiteConnection(connectionString));
 
-
+            
             var calrepo = new CalendarRepository(repo1, repo2);
 
             //await repo1.InsertAsync(c);

@@ -34,6 +34,16 @@ namespace CalDavSharp.Server.Controllers
 			return File("~/index.html", "text/html");
 		}
 
+		private async Task<XDocument> GetRequestXml()
+		{
+			var request = HttpContext.Request;
+			string body;
+			using var reader = new StreamReader(HttpContext.Request.Body);
+			{
+				body = await reader.ReadToEndAsync();
+			}
+			return body.Length > 0 ? XDocument.Parse(body) : null;
+		}
 
 		[BasicAuth("CalDAV Server")]
 		[AcceptVerbs("OPTIONS")]
@@ -41,47 +51,37 @@ namespace CalDavSharp.Server.Controllers
 		[Route("calendars/{userName:alpha}/{calendarName:alpha}")]
 		public async Task<IActionResult> Options([FromRoute] string userName, [FromRoute] string calendarName)
 		{
-			//var xmlDoc = GetRequestXml();
-			//if (xmlDoc != null)
-			//{
-			//	var request = xmlDoc.Root.Elements().FirstOrDefault();
-			//	switch (request.Name.LocalName.ToLower())
-			//	{
-			//		case "calendar-collection-set":
-			//			break;
-			//			//var repo = GetService<ICalendarRepository>();
-			//			//var calendars = repo.GetCalendars().ToArray();
-			//			/*
-			//			return new Result
-			//			{
-			//				Content =new XElement("options-response",
-			//					new XElement("calendar-collection-set",
-			//						calendars.Select(calendar =>
-			//						new XElement("href",
-			//							 new Uri(Request.Url, GetCalendarUrl(calendar.Name))
-			//							 ))
-			//				 )
-			//			 )
-			//			};
-						
-			//	}
-			//}
-		
-
-			Response.Headers.Add("Allow", "OPTIONS, PROPFIND, HEAD, GET, REPORT, PROPPATCH, PUT, DELETE, POST");
-			//Request.Headers.Add("Allow" "PROPFIND, PROPPATCH, LOCK, UNLOCK, REPORT, ACL"")
-			return StatusCode(200);
-			
-			/*return new ContentResult()
+			var b = await GetRequestXml();
+			if (b is not null)
 			{
-				StatusCode=200,
-				Content = "",
-				ContentType="text/xml"
-			};
-			*/
+				//	var request = xmlDoc.Root.Elements().FirstOrDefault();
+				//	switch (request.Name.LocalName.ToLower())
+				//	{
+				//		case "calendar-collection-set":
+				//			break;
+				//			//var repo = GetService<ICalendarRepository>();
+				//			//var calendars = repo.GetCalendars().ToArray();
+				//			/*
+				//			return new Result
+				//			{
+				//				Content =new XElement("options-response",
+				//					new XElement("calendar-collection-set",
+				//						calendars.Select(calendar =>
+				//						new XElement("href",
+				//							 new Uri(Request.Url, GetCalendarUrl(calendar.Name))
+				//							 ))
+				//				 )
+				//			 )
+				//			};
+				return BadRequest("OPTIONS xml body content not implemented yet");
 
-			//throw new NotImplementedException();
-			//return null;
+			}
+			else
+			{
+				Response.Headers.Add("Allow", "OPTIONS, PROPFIND, HEAD, GET, REPORT, PROPPATCH, PUT, DELETE, POST");
+				//Request.Headers.Add("Allow" "PROPFIND, PROPPATCH, LOCK, UNLOCK, REPORT, ACL"")
+				return StatusCode(200);
+			}
 		}
 		
 		[BasicAuth("CalDAV Server")]
@@ -129,7 +129,7 @@ namespace CalDavSharp.Server.Controllers
 			{
 				return null;
 			}
-	//string icsFile=null;
+			//string icsFile=null;
 			var result = await _Manager.Report(userName, calendarName, icsFileName, request);
 
 
@@ -245,7 +245,6 @@ namespace CalDavSharp.Server.Controllers
 				body = await reader.ReadToEndAsync();
 			}
 
-
 			if (HttpContext.Request.Headers.TryGetValue("If-Match", out var ifMatch))
 			{
 				var etag = await _Manager.UpdateEvent(userName, calendarName, fileName, body);
@@ -259,19 +258,6 @@ namespace CalDavSharp.Server.Controllers
 				return StatusCode(201);
 			}
 		}
-
-		//for debugging
-		/*
-		[Consumes("text/calendar")]
-		[HttpPut]
-		[Route("calendars/{*.}/")]
-		public async Task<IActionResult> Put()
-		{
-			Debug.WriteLine(HttpContext.Request.Path);
-			throw new NotImplementedException();
-			return null;
-		}
-		*/
 
 		[BasicAuth("CalDAV Server")]
 		[AcceptVerbs("MKCALENDAR")]
@@ -291,7 +277,20 @@ namespace CalDavSharp.Server.Controllers
             return null;
         }
 
-        /*
+		//for debugging
+		/*
+		[Consumes("text/calendar")]
+		[HttpPut]
+		[Route("calendars/{*.}/")]
+		public async Task<IActionResult> Put()
+		{
+			Debug.WriteLine(HttpContext.Request.Path);
+			throw new NotImplementedException();
+			return null;
+		}
+		*/
+
+		/*
          * switch (Request.HttpMethod) {
 				case "OPTIONS": return Options();
 				case "PROPFIND": return PropFind(id);
@@ -304,5 +303,5 @@ namespace CalDavSharp.Server.Controllers
 				case "GET": return Get(id, uid);
 				default: return NotImplemented();
 		*/
-    }
+	}
 }
