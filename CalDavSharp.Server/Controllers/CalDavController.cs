@@ -88,7 +88,8 @@ namespace CalDavSharp.Server.Controllers
 		[AcceptVerbs("PROPFIND")]
 		[ApiExplorerSettings(IgnoreApi = true)]
 		[Route("calendars")]
-		[Route("calendars/{userName:alpha}/{calendarName:alpha}")]
+		[Route("calendars/{userName}")]
+		[Route("calendars/{userName}/{calendarName}")]
 		public async Task<ActionResult<System.Xml.Linq.XDocument>> PropFind([FromRoute] string userName,
 												  [FromRoute] string calendarName,
 												  [FromBody] XElement xrequest)
@@ -96,6 +97,13 @@ namespace CalDavSharp.Server.Controllers
 			var headers = HttpContext.Request.Headers;
 			var depth = headers["Depth"].Count == 0 ? 0 : int.Parse(headers["Depth"]);
 			var request = new XDocument(xrequest);
+
+			var user = HttpContext.User.Identity;
+
+			if (userName is null)
+			{
+				userName = HttpContext.User.Identity.Name;
+			}
 
 			var result = await _Manager.Propfind(depth, userName, calendarName, request);
 

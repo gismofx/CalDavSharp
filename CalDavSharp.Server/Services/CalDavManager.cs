@@ -17,8 +17,9 @@ namespace CalDavSharp.Server.Services
         public static readonly XNamespace xDav = XNamespace.Get("DAV:");
         private readonly XName hrefName;
         private CalendarRepository _CalendarRepo;
-        private string CalendarUrl;
-        private string UserUrl;
+        private string _CalendarUrl;
+        private string _UserUrl;
+        private string _UserName;
         private readonly XNamespace xNSC;
         private readonly XNamespace xNSD;
         
@@ -56,8 +57,9 @@ namespace CalDavSharp.Server.Services
         public async Task<XDocument> Propfind(int depth, string userName, string calendarName, XDocument xDoc)
         {
             //var result = _Parser.ParsePropfind(xmlDoc);
-            UserUrl = $"/CalDav/Calendars/{userName}";
-            CalendarUrl = $"{UserUrl}/{calendarName}";
+            
+            _UserUrl = $"/CalDav/Calendars/{userName}";
+            _CalendarUrl = $"{_UserUrl}/{calendarName}";
             var props = xDoc.Descendants(XName.Get("prop", xNSD.NamespaceName)).FirstOrDefault().Elements();// GetName("prop")).FirstOrDefault().Elements()
 
             Calendar calendar = null;
@@ -69,6 +71,10 @@ namespace CalDavSharp.Server.Services
                     //@Todo: create null response 
                     return null;
                 }
+            }
+            else if (userName is not null && calendarName is null)
+            {
+                var calendars = await _CalendarRepo.GetCalendarsByUserAsync(userName);
             }
                     
 
@@ -98,7 +104,7 @@ namespace CalDavSharp.Server.Services
             var calendarUserAddressSetName = xCalDav.GetName("calendar-user-address-set");
             var calendarUserAddress = !allprop && !props.Any(x => x.Name == calendarUserAddressSetName) ? null :
                 calendarUserAddressSetName.Element(
-                    hrefName.Element(UserUrl),
+                    hrefName.Element(_UserUrl),
                     hrefName.Element("mailto:" + GetUserEmail())
                 );
 
@@ -110,7 +116,7 @@ namespace CalDavSharp.Server.Services
 
             var calendarHomeSetName = xCalDav.GetName("calendar-home-set");
             var calendarHomeSet = !allprop && !props.Any(x => x.Name == calendarHomeSetName) ? null :
-                calendarHomeSetName.Element(hrefName.Element(CalendarUrl));
+                calendarHomeSetName.Element(hrefName.Element(_CalendarUrl));
 
             var getetagName = xDav.GetName("getetag");
             var getetag = !allprop && !props.Any(x => x.Name == getetagName) ? null :
@@ -118,7 +124,7 @@ namespace CalDavSharp.Server.Services
 
             var currentUserPrincipalName = xDav.GetName("current-user-principal");
             var currentUserPrincipal = !props.Any(x => x.Name == currentUserPrincipalName) ? null :
-                currentUserPrincipalName.Element(hrefName.Element(UserUrl));
+                currentUserPrincipalName.Element(hrefName.Element(_UserUrl));
 
             var resourceTypeName = xDav.GetName("resourcetype");
             var resourceType = !allprop && !props.Any(x => x.Name == resourceTypeName) ? null : (
@@ -127,7 +133,7 @@ namespace CalDavSharp.Server.Services
 
             var ownerName = xDav.GetName("owner");
             var owner = !allprop && !props.Any(x => x.Name == ownerName) ? null :
-                ownerName.Element(hrefName.Element(UserUrl));
+                ownerName.Element(hrefName.Element(_UserUrl));
 
             var displayNameName = xDav.GetName("displayname");
             var displayName = calendar == null || (!allprop && !props.Any(x => x.Name == displayNameName)) ? null :
@@ -175,7 +181,7 @@ namespace CalDavSharp.Server.Services
                                                     new XAttribute(XNamespace.Xmlns + "C", xCalDav.NamespaceName),
                                                     new XAttribute(XNamespace.Xmlns + "CS", xCS.NamespaceName),
                     xDav.Element("response",
-                    xDav.Element("href", UserUrl /*Request.RawUrl*/),
+                    xDav.Element("href", _UserUrl /*Request.RawUrl*/),
                     xDav.Element("propstat",
                                 xDav.Element("status", "HTTP/1.1 200 OK"),
                                 xDav.Element("prop",
@@ -195,7 +201,7 @@ namespace CalDavSharp.Server.Services
                          .Where(x => x != null)
                          .ToArray()
                             .Select(item => xDav.Element("response",
-                                hrefName.Element($"{CalendarUrl}/{item.EventId}"/*GetCalendarObjectUrl(calendar.ID, item.UID)*/),
+                                hrefName.Element($"{_CalendarUrl}/{item.EventId}"/*GetCalendarObjectUrl(calendar.ID, item.UID)*/),
                                     xDav.Element("propstat",
                                         xDav.Element("status", "HTTP/1.1 200 OK"),
                                         xDav.Element("prop",
@@ -446,7 +452,7 @@ namespace CalDavSharp.Server.Services
                 case "calendar-user-address-set":
                     outputElement =
                             caldavProperty.Name().Element(
-                            hrefName.Element(UserUrl),
+                            hrefName.Element(_UserUrl),
                             hrefName.Element("mailto:" + GetUserEmail())
                             );
                     break;
@@ -460,7 +466,7 @@ namespace CalDavSharp.Server.Services
 
                 case "calendar-home-set":
                     outputElement =
-                        caldavProperty.Name().Element(hrefName.Element(CalendarUrl));
+                        caldavProperty.Name().Element(hrefName.Element($"{_UserUrl}"));
                     break;
 
                 case "getetag":
@@ -470,7 +476,7 @@ namespace CalDavSharp.Server.Services
 
                 case "current-user-principal":
                     outputElement = 
-                        caldavProperty.Name().Element(hrefName.Element(UserUrl));
+                        caldavProperty.Name().Element(hrefName.Element(_UserUrl));
                     break;
 
                 case "resourcetype":
@@ -480,7 +486,7 @@ namespace CalDavSharp.Server.Services
 
                 case "owner":
                     outputElement =
-                        caldavProperty.Name().Element(hrefName.Element(UserUrl));
+                        caldavProperty.Name().Element(hrefName.Element(_UserUrl));
                     break;
 
                 case "displayname":

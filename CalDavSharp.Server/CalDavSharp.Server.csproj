@@ -3,6 +3,7 @@
   <PropertyGroup>
     <TargetFramework>net5.0</TargetFramework>
     <RootNamespace>CalDavSharp.Server</RootNamespace>
+    <UserSecretsId>9baf5926-c217-4d49-a2e5-c8ac12d8a3c0</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>

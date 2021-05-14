@@ -32,6 +32,21 @@ namespace CalDavSharp.Server.Data
             
         }
 
+        /// <summary>
+        /// Find all calendars for a specified user
+        /// </summary>
+        /// <param name="userName"></param>
+        /// <returns></returns>
+        public async Task<IEnumerable<Calendar>> GetCalendarsByUserAsync(string userName)
+        {
+            using (var conn = _CalendarRepository.DbConnection)
+            {
+                var dynamicParams = new DynamicParameters();
+                dynamicParams.Add("UserName", userName.ToUpper());
+                return await conn.QueryAsync<Calendar>("SELECT * FROM Calendar WHERE UserName LIKE @UserName", dynamicParams);
+            }
+        }
+
         public async Task<string> GetCalendarIdByUserandNameAsync(string user, string calendarName)
         {
             using (var conn = _CalendarRepository.DbConnection)

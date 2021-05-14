@@ -29,6 +29,7 @@ namespace CalDavSharp.Shared
             properties.AddCalDavPropery("supported-calendar-component-set", xCalDav, false);// ("supported-calendar-component-set",xCalDav.GetName("supported-calendar-component-set"));
             properties.AddCalDavPropery("getcontenttype", xDav);// ("getcontenttype",xDav.GetName("getcontenttype"));
             properties.AddCalDavPropery("getctag", xCS);// ("getcontenttype",xDav.GetName("getcontenttype"));
+            properties.AddCalDavPropery("calendar-home-set", xCalDav, false);
             return properties;
         }
 
