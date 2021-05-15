@@ -56,8 +56,6 @@ namespace CalDavSharp.Server.Services
         /// <returns></returns>
         public async Task<XDocument> Propfind(int depth, string userName, string calendarName, XDocument xDoc)
         {
-            //var result = _Parser.ParsePropfind(xmlDoc);
-            
             _UserUrl = $"/CalDav/Calendars/{userName}";
             _CalendarUrl = $"{_UserUrl}/{calendarName}";
             var props = xDoc.Descendants(XName.Get("prop", xNSD.NamespaceName)).FirstOrDefault().Elements();// GetName("prop")).FirstOrDefault().Elements()
@@ -76,7 +74,6 @@ namespace CalDavSharp.Server.Services
             {
                 var calendars = await _CalendarRepo.GetCalendarsByUserAsync(userName);
             }
-                    
 
             var allprop = props.Elements(xDav.GetName("allprops")).Any();
             //var hrefName = xDav.GetName("href");
@@ -85,13 +82,13 @@ namespace CalDavSharp.Server.Services
             //var addressbookHomeSetName = xCalDav.GetName("addressbook-home-set");
 
             /*start edit*/
-            var availableProps = Props.Properties();
-            var returnProps = new List<XElement>();
+            var availableProps = DavProperty.Properties;
+            var returnProps = new Dictionary<string,XElement>();
             foreach (var prop in props)
             {
-                if (availableProps.TryGetValue(prop.Name.LocalName, out CaldavProperty propName))
+                if (availableProps.TryGetValue(prop.Name.LocalName, out DavProperty propName))
                 {
-                    returnProps.Add(GetProperty(propName, allprop, calendar));
+                    returnProps.Add(propName.PropertyName,GetProperty(propName, allprop, calendar));
                 }
                 else
                 {
@@ -99,7 +96,7 @@ namespace CalDavSharp.Server.Services
                 }
             }
             /*end edit*/
-            
+            /*
             //copy and relocate
             var calendarUserAddressSetName = xCalDav.GetName("calendar-user-address-set");
             var calendarUserAddress = !allprop && !props.Any(x => x.Name == calendarUserAddressSetName) ? null :
@@ -157,7 +154,8 @@ namespace CalDavSharp.Server.Services
             var getContentTypeName = xDav.GetName("getcontenttype");
             var getContentType = !allprop && !props.Any(x => x.Name == getContentTypeName) ? null :
                 getContentTypeName.Element("text/calendar; component=vevent");
-            
+
+            */
 
             /*
             var supportedProperties = new HashSet<XName> {
@@ -185,7 +183,7 @@ namespace CalDavSharp.Server.Services
                     xDav.Element("propstat",
                                 xDav.Element("status", "HTTP/1.1 200 OK"),
                                 xDav.Element("prop",
-                                    returnProps
+                                    returnProps.Values
                                     /*resourceType, owner, supportedComponents, displayName,
                                     getContentType, calendarDescription, calendarHomeSet,
                                     currentUserPrincipal, supportedReportSet, calendarColor,
@@ -201,13 +199,13 @@ namespace CalDavSharp.Server.Services
                          .Where(x => x != null)
                          .ToArray()
                             .Select(item => xDav.Element("response",
-                                hrefName.Element($"{_CalendarUrl}/{item.EventId}"/*GetCalendarObjectUrl(calendar.ID, item.UID)*/),
+                                hrefName.Element($"{_CalendarUrl}/{item.EventId}"/*GetCalendarObjectUrl(calendar.ID, item.UID)*/),/*add ics?*/
                                     xDav.Element("propstat",
                                         xDav.Element("status", "HTTP/1.1 200 OK"),
                                         xDav.Element("prop",
-                                        resourceType == null ? null : resourceTypeName.Element(),
-                                        (getContentType == null ? null : getContentTypeName.Element("text/calendar; component=v" + item.GetType().Name.ToLower())),
-                                        getetag == null ? null : getetagName.Element("\"" + XdoxHelpers.FormatDate(item.LastModifiedUtc) + "\"")
+                                        returnProps.ContainsKey(DavProperty.resourcetype.PropertyName) ? DavProperty.resourcetype.xElement() : null,
+                                        (returnProps.ContainsKey(DavProperty.getcontenttype.PropertyName) ? DavProperty.getcontenttype.xElement("text/calendar; component=v" + item.GetType().Name.ToLower()):null),
+                                        returnProps.ContainsKey(DavProperty.getetag.PropertyName) ? DavProperty.getetag.xElement($"\"{item.LastModifiedUtc.GetHashCode()}\"") : null
                                         )
                                     )
                                 )
@@ -375,7 +373,7 @@ namespace CalDavSharp.Server.Services
                                         xDav.Element("propstat",
                                         xDav.Element("status", "HTTP/1.1 200 OK"),
                                         xDav.Element("prop",
-                                            xDav.Element("getetag", r.LastModifiedUtc.GetHashCode()),
+                                            xDav.Element("getetag", $"\"{r.LastModifiedUtc.GetHashCode()}\""),
                                             xCalDav.Element("calendar-data", r.ICS)
                                             )
                                         )
@@ -441,7 +439,7 @@ namespace CalDavSharp.Server.Services
         /// <param name="allprop"></param>
         /// <param name="calendar"></param>
         /// <returns>An XElement with the CalDav property</returns>
-        private XElement GetProperty(CaldavProperty caldavProperty, bool allprop, Calendar calendar)
+        private XElement GetProperty(DavProperty caldavProperty, bool allprop, Calendar calendar)
         {
             XElement outputElement = null;
             
@@ -451,7 +449,7 @@ namespace CalDavSharp.Server.Services
             {
                 case "calendar-user-address-set":
                     outputElement =
-                            caldavProperty.Name().Element(
+                            caldavProperty.xElement(
                             hrefName.Element(_UserUrl),
                             hrefName.Element("mailto:" + GetUserEmail())
                             );
@@ -459,49 +457,49 @@ namespace CalDavSharp.Server.Services
 
                 case "supported-report-set":
                     outputElement =
-                         caldavProperty.Name().Element(
+                         caldavProperty.xElement(
                              xDav.Element("supported-report", xDav.Element("report", xDav.Element("calendar-multiget")))
                          );
                     break;
 
                 case "calendar-home-set":
                     outputElement =
-                        caldavProperty.Name().Element(hrefName.Element($"{_UserUrl}"));
+                        caldavProperty.xElement(hrefName.Element($"{_UserUrl}"));
                     break;
 
                 case "getetag":
                     outputElement = 
-                        caldavProperty.Name().Element();
+                        caldavProperty.xElement();
                     break;
 
                 case "current-user-principal":
                     outputElement = 
-                        caldavProperty.Name().Element(hrefName.Element(_UserUrl));
+                        caldavProperty.xElement(hrefName.Element(_UserUrl));
                     break;
 
                 case "resourcetype":
                     outputElement =
-                        caldavProperty.Name().Element(xDav.Element("collection"), xCalDav.Element("calendar"), xDav.Element("principal"));
+                        caldavProperty.xElement(xDav.Element("collection"), xCalDav.Element("calendar"), xDav.Element("principal"));
                     break;
 
                 case "owner":
                     outputElement =
-                        caldavProperty.Name().Element(hrefName.Element(_UserUrl));
+                        caldavProperty.xElement(hrefName.Element(_UserUrl));
                     break;
 
                 case "displayname":
                     outputElement = 
-                        caldavProperty.Name().Element(calendar.CalendarName ?? calendar.CalendarId);
+                        caldavProperty.xElement(calendar.CalendarName ?? calendar.CalendarId);
                     break;
 
                 case "calendar-color":
                     outputElement = 
-                        caldavProperty.Name().Element("FF5800");
+                        caldavProperty.xElement("FF5800");
                     break;
 
                 case "calendar-description":
                     outputElement = 
-                        caldavProperty.Name().Element(calendar.Description);
+                        caldavProperty.xElement(calendar.Description);
                     break;
 
                 case "supported-calendar-component-set":
@@ -524,12 +522,12 @@ namespace CalDavSharp.Server.Services
 
                 case "getcontenttype":
                     outputElement = 
-                        caldavProperty.Name().Element("text/calendar; component=vevent");
+                        caldavProperty.xElement("text/calendar; component=vevent");
                     break;
                 
                 case "getctag":
                     outputElement =
-                        caldavProperty.Name().Element(calendar.cTag);
+                        caldavProperty.xElement(calendar.cTag);
                     break;
 
                 default:

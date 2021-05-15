@@ -19,6 +19,7 @@ namespace CalDavSharp.Shared
             return new XElement(name, inner);
         }
 
+
         public static string FormatDate(this DateTime? dateTime)
         {
             if (dateTime == null) return null;

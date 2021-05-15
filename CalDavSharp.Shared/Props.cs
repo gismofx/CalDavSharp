@@ -12,9 +12,9 @@ namespace CalDavSharp.Shared
         public static readonly XNamespace xApple = XNamespace.Get("http://apple.com/ns/ical/");
         public static readonly XNamespace xCS = XNamespace.Get("http://calendarserver.org/ns/");
 
-        public static Dictionary<string, CaldavProperty> Properties()
+        public static Dictionary<string, DavProperty> Properties()
         {
-            var properties = new Dictionary<string, CaldavProperty>();
+            var properties = new Dictionary<string, DavProperty>();
             properties.AddCalDavPropery("allprops", xDav);// xDav.GetName("allprops"));
             properties.AddCalDavPropery("href", xDav);// xDav.GetName("href"));
             properties.AddCalDavPropery("calendar-user-address-set", xCalDav, false);//  xCalDav.GetName("calendar-user-address-set"));
@@ -33,9 +33,9 @@ namespace CalDavSharp.Shared
             return properties;
         }
 
-        public static void AddCalDavPropery(this Dictionary<string, CaldavProperty> propDict, string propertyName, XNamespace ns, bool includeInAllProp = true)
+        public static void AddCalDavPropery(this Dictionary<string, DavProperty> propDict, string propertyName, XNamespace ns, bool includeInAllProp = true)
         {
-            propDict.Add(propertyName, new CaldavProperty(propertyName, ns,includeInAllProp));
+            propDict.Add(propertyName, new DavProperty(propertyName, ns,includeInAllProp));
         }
 
 

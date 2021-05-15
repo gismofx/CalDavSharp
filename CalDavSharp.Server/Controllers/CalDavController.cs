@@ -47,8 +47,8 @@ namespace CalDavSharp.Server.Controllers
 
 		[BasicAuth("CalDAV Server")]
 		[AcceptVerbs("OPTIONS")]
-		[Route("calendars/{userName:alpha}")]
-		[Route("calendars/{userName:alpha}/{calendarName:alpha}")]
+		[Route("calendars/{userName}")]
+		[Route("calendars/{userName}/{calendarName}")]
 		public async Task<IActionResult> Options([FromRoute] string userName, [FromRoute] string calendarName)
 		{
 			var b = await GetRequestXml();
@@ -123,8 +123,8 @@ namespace CalDavSharp.Server.Controllers
 		[BasicAuth("CalDAV Server")]
 		[AcceptVerbs("REPORT")]
 		[ApiExplorerSettings(IgnoreApi = true)]
-		[Route("calendars/{userName:alpha}/{calendarName:alpha}")]
-		[Route("calendars/{userName:alpha}/{calendarName:alpha}/{icsFileName}")]//[FromRoute]
+		[Route("calendars/{userName}/{calendarName}")]
+		[Route("calendars/{userName}/{calendarName}/{icsFileName}")]//[FromRoute]
 		public async Task<ActionResult<string>> Report([FromRoute] string userName, 
 														[FromRoute] string calendarName,
 														[FromRoute] string icsFileName,
@@ -210,7 +210,7 @@ namespace CalDavSharp.Server.Controllers
 
 		[BasicAuth("CalDAV Server")]
 		[HttpDelete]
-		[Route("calendars/{userName:alpha}/{calendarName:alpha}/{icsFileName}")]
+		[Route("calendars/{userName}/{calendarName}/{icsFileName}")]
 		public async Task<IActionResult> Delete([FromRoute] string userName,
 										    	[FromRoute] string calendarName,
 											    [FromRoute] string icsFileName)
