@@ -37,6 +37,8 @@ namespace CalDavSharp.Shared
         public static DavProperty getcontenttype { get; } = AddDavProperty("getcontenttype", xDav);
         public static DavProperty getctag { get; } = AddDavProperty("getctag", xCS);
         public static DavProperty calendar_home_set { get; } = AddDavProperty("calendar-home-set", xCalDav, false);
+        public static DavProperty principal_URL { get; } = AddDavProperty("principal-URL", xDav, false);
+        public static DavProperty principal_collection_set { get; } = AddDavProperty("principal-collection-set", xDav, false);
 
         private static DavProperty AddDavProperty(string name, XNamespace propNamespace, bool includeInAllProp = true)
         {
@@ -46,7 +48,12 @@ namespace CalDavSharp.Shared
         }
 
         public readonly XNamespace xNameSpace;
+        
+        /// <summary>
+        /// The String Value/Name of the property per the spec
+        /// </summary>
         public readonly string PropertyName;
+        
         public readonly bool IncludeInAllProp;
         public DavProperty(string name, XNamespace propNamespace, bool includeInAllProp=true)
         {

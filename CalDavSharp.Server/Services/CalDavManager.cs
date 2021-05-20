@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Web;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -6,6 +7,8 @@ using System.Xml.Linq;
 using CalDavSharp.Server.Data;
 using CalDavSharp.Server.Models;
 using CalDavSharp.Shared;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 
 namespace CalDavSharp.Server.Services
 {
@@ -19,16 +22,20 @@ namespace CalDavSharp.Server.Services
         private CalendarRepository _CalendarRepo;
         private string _CalendarUrl;
         private string _UserUrl;
+        private string _PrincipalUrl;
         private string _UserName;
         private readonly XNamespace xNSC;
         private readonly XNamespace xNSD;
-        
-        public CalDavManager(CalendarRepository calendarRepository)
+
+        private readonly ILogger _logger;
+
+        public CalDavManager(CalendarRepository calendarRepository)//, ILogger logger)
         {
             _CalendarRepo = calendarRepository;
             xNSD = "DAV:";
             xNSC = "urn:ietf:params:xml:ns:caldav";
             hrefName = xDav.GetName("href");
+            //_logger = logger;
         }
 
         /// <summary>
@@ -54,10 +61,14 @@ namespace CalDavSharp.Server.Services
         /// <param name="calendarName"></param>
         /// <param name="xDoc"></param>
         /// <returns></returns>
-        public async Task<XDocument> Propfind(int depth, string userName, string calendarName, XDocument xDoc)
+        public async Task<XDocument> Propfind(HttpContext context, int depth, string targetPath, string userName, string calendarName, XDocument xDoc)
         {
-            _UserUrl = $"/CalDav/Calendars/{userName}";
-            _CalendarUrl = $"{_UserUrl}/{calendarName}";
+            //var basePath = @$"{context.Request.Scheme}://{context.Request.Host}";
+            //userName = HttpUtility.UrlEncode(userName);
+
+            _UserUrl = @$"/calendars/{userName}/";
+            _PrincipalUrl = @$"/principals/{userName}/";
+            _CalendarUrl = @$"{_UserUrl}/{calendarName}/";
             var props = xDoc.Descendants(XName.Get("prop", xNSD.NamespaceName)).FirstOrDefault().Elements();// GetName("prop")).FirstOrDefault().Elements()
 
             Calendar calendar = null;
@@ -95,9 +106,20 @@ namespace CalDavSharp.Server.Services
                     throw new Exception($"Prop: {prop.Name} is not available.");
                 }
             }
+
+            /*
+            try
+            {
+                returnProps.Remove(DavProperty.principal_URL.PropertyName);
+            }
+            finally
+            { }
+            */
+
+
             /*end edit*/
             /*
-            //copy and relocate
+            copy and relocate
             var calendarUserAddressSetName = xCalDav.GetName("calendar-user-address-set");
             var calendarUserAddress = !allprop && !props.Any(x => x.Name == calendarUserAddressSetName) ? null :
                 calendarUserAddressSetName.Element(
@@ -174,20 +196,20 @@ namespace CalDavSharp.Server.Services
                 xDav.Element("status", "HTTP/1.1 404 Not Found"), prop404);
 
             //@ToDo: look up properties and foreach below inside propstat to product the properties
-            var e = new XElement(
-                    /*xDav.Element("multistatus",*/ new XElement("multistatus", new XAttribute(XNamespace.Xmlns + "D", xDav.NamespaceName), 
-                                                    new XAttribute(XNamespace.Xmlns + "C", xCalDav.NamespaceName),
-                                                    new XAttribute(XNamespace.Xmlns + "CS", xCS.NamespaceName),
+            var e = xDav.Element("multistatus",
+                new XAttribute(XNamespace.Xmlns + "D", xDav.NamespaceName),
+                    new XAttribute(XNamespace.Xmlns + "C", xCalDav.NamespaceName),
+                    new XAttribute(XNamespace.Xmlns + "CS", xCS.NamespaceName),
                     xDav.Element("response",
-                    xDav.Element("href", _UserUrl /*Request.RawUrl*/),
+                    xDav.Element("href", targetPath /*Request.RawUrl*/),
                     xDav.Element("propstat",
                                 xDav.Element("status", "HTTP/1.1 200 OK"),
                                 xDav.Element("prop",
                                     returnProps.Values
-                                    /*resourceType, owner, supportedComponents, displayName,
-                                    getContentType, calendarDescription, calendarHomeSet,
-                                    currentUserPrincipal, supportedReportSet, calendarColor,
-                                    calendarUserAddress*/
+                                /*resourceType, owner, supportedComponents, displayName,
+                                getContentType, calendarDescription, calendarHomeSet,
+                                currentUserPrincipal, supportedReportSet, calendarColor,
+                                calendarUserAddress*/
                                 )
                             ),
 
@@ -204,7 +226,7 @@ namespace CalDavSharp.Server.Services
                                         xDav.Element("status", "HTTP/1.1 200 OK"),
                                         xDav.Element("prop",
                                         returnProps.ContainsKey(DavProperty.resourcetype.PropertyName) ? DavProperty.resourcetype.xElement() : null,
-                                        (returnProps.ContainsKey(DavProperty.getcontenttype.PropertyName) ? DavProperty.getcontenttype.xElement("text/calendar; component=v" + item.GetType().Name.ToLower()):null),
+                                        (returnProps.ContainsKey(DavProperty.getcontenttype.PropertyName) ? DavProperty.getcontenttype.xElement("text/calendar; component=v" + item.GetType().Name.ToLower()) : null),
                                         returnProps.ContainsKey(DavProperty.getetag.PropertyName) ? DavProperty.getetag.xElement($"\"{item.LastModifiedUtc.GetHashCode()}\"") : null
                                         )
                                     )
@@ -212,10 +234,10 @@ namespace CalDavSharp.Server.Services
                             )
                         )
                     )
-                )
-                    );
+                );
+                    
 
-            return new XDocument(e);
+            return new XDocument(new XDeclaration("1.0","UTF-8",null), e);
             /*
 
             {
@@ -258,7 +280,7 @@ namespace CalDavSharp.Server.Services
                 new XDeclaration("1.1", "UTF-8", null),
                 new XElement("multistatus", new XAttribute(XNamespace.Xmlns +"D", "DAV:"), new XAttribute(XNamespace.Xmlns + "C", "urn:ietf:params:xml:ns:caldav"),
                     new XElement("Response",
-                        new XElement(xNSD+"href",$"/calendars/{userName}/{calendarName}"),
+                        new XElement(xNSD+"href",$"/calendars/{userName}/{calendarName}/"),
                         new XElement(
                             xNSD+"propstat",
                                 new XElement(xNSD+"prop"),
@@ -381,7 +403,7 @@ namespace CalDavSharp.Server.Services
                                     )
                                 )
                     );
-                return new XDocument(e);
+                return new XDocument(new XDeclaration("1.0", "UTF-8", null), e);
             }
             return null;
 
@@ -479,7 +501,7 @@ namespace CalDavSharp.Server.Services
 
                 case "resourcetype":
                     outputElement =
-                        caldavProperty.xElement(xDav.Element("collection"), xCalDav.Element("calendar"), xDav.Element("principal"));
+                        caldavProperty.xElement(xDav.Element("collection"));//, xCalDav.Element("calendar"), xDav.Element("principal"));
                     break;
 
                 case "owner":
@@ -530,6 +552,15 @@ namespace CalDavSharp.Server.Services
                         caldavProperty.xElement(calendar.cTag);
                     break;
 
+                case "principal-URL":
+                    outputElement =
+                        caldavProperty.xElement(hrefName.Element(_PrincipalUrl));
+                    break;
+
+                case "principal-collection-set":
+                    outputElement =
+                        caldavProperty.xElement();//leave this empty hrefName.Element(_PrincipalUrl));
+                    break;
                 default:
                     break;
             

@@ -18,7 +18,9 @@ namespace CalDavSharp.Server.Controllers
 {
 
 	[ApiController]
-	[Route("[controller]")]
+	//[Route("[controller]")]
+	[Route("calendars")]
+	[Route("principals")]
 	public class CalDavController : ControllerBase
 	{
 		private CalDavManager _Manager = null;
@@ -47,8 +49,9 @@ namespace CalDavSharp.Server.Controllers
 
 		[BasicAuth("CalDAV Server")]
 		[AcceptVerbs("OPTIONS")]
-		[Route("calendars/{userName}")]
-		[Route("calendars/{userName}/{calendarName}")]
+		[Route("")]
+		[Route("{userName}")]
+		[Route("{userName}/{calendarName}")]
 		public async Task<IActionResult> Options([FromRoute] string userName, [FromRoute] string calendarName)
 		{
 			var b = await GetRequestXml();
@@ -79,6 +82,7 @@ namespace CalDavSharp.Server.Controllers
 			else
 			{
 				Response.Headers.Add("Allow", "OPTIONS, PROPFIND, HEAD, GET, REPORT, PROPPATCH, PUT, DELETE, POST");
+				Response.Headers.Add("DAV", "1, 2, access-control, calendar-access");
 				//Request.Headers.Add("Allow" "PROPFIND, PROPPATCH, LOCK, UNLOCK, REPORT, ACL"")
 				return StatusCode(200);
 			}
@@ -87,9 +91,9 @@ namespace CalDavSharp.Server.Controllers
 		[BasicAuth("CalDAV Server")]
 		[AcceptVerbs("PROPFIND")]
 		[ApiExplorerSettings(IgnoreApi = true)]
-		[Route("calendars")]
-		[Route("calendars/{userName}")]
-		[Route("calendars/{userName}/{calendarName}")]
+		[Route("")]
+		[Route("{userName}")]
+		[Route("{userName}/{calendarName}")]
 		public async Task<ActionResult<System.Xml.Linq.XDocument>> PropFind([FromRoute] string userName,
 												  [FromRoute] string calendarName,
 												  [FromBody] XElement xrequest)
@@ -105,12 +109,12 @@ namespace CalDavSharp.Server.Controllers
 				userName = HttpContext.User.Identity.Name;
 			}
 
-			var result = await _Manager.Propfind(depth, userName, calendarName, request);
-
+			var result = await _Manager.Propfind(HttpContext, depth, HttpContext.Request.Path.ToString(), userName, calendarName, request);
+			//ToDo: work on 404 response for bad user name/calendar name is result is null
 			return new ContentResult
 			{
-				Content = result.ToString(),
-				ContentType = "application/xml",
+				Content = result.Declaration.ToString() + result.ToString(),
+				ContentType = "text/xml",
 				StatusCode = 207
 			};
 
@@ -123,8 +127,8 @@ namespace CalDavSharp.Server.Controllers
 		[BasicAuth("CalDAV Server")]
 		[AcceptVerbs("REPORT")]
 		[ApiExplorerSettings(IgnoreApi = true)]
-		[Route("calendars/{userName}/{calendarName}")]
-		[Route("calendars/{userName}/{calendarName}/{icsFileName}")]//[FromRoute]
+		[Route("{userName}/{calendarName}")]
+		[Route("{userName}/{calendarName}/{icsFileName}")]//[FromRoute]
 		public async Task<ActionResult<string>> Report([FromRoute] string userName, 
 														[FromRoute] string calendarName,
 														[FromRoute] string icsFileName,
@@ -201,8 +205,8 @@ namespace CalDavSharp.Server.Controllers
 
 			return new ContentResult
 			{
-				Content = result.ToString(),
-				ContentType = "application/xml",
+				Content = result.Declaration.ToString() + result.ToString(),
+				ContentType = "text/xml",
 				StatusCode = 207
 			};
 			//return result.ToString();
@@ -210,7 +214,7 @@ namespace CalDavSharp.Server.Controllers
 
 		[BasicAuth("CalDAV Server")]
 		[HttpDelete]
-		[Route("calendars/{userName}/{calendarName}/{icsFileName}")]
+		[Route("{userName}/{calendarName}/{icsFileName}")]
 		public async Task<IActionResult> Delete([FromRoute] string userName,
 										    	[FromRoute] string calendarName,
 											    [FromRoute] string icsFileName)
@@ -239,7 +243,7 @@ namespace CalDavSharp.Server.Controllers
 		[BasicAuth("CalDAV Server")]
 		[HttpPut]
 		[Consumes("text/calendar")]
-		[Route("calendars/{userName}/{calendarName}/{fileName}")]
+		[Route("{userName}/{calendarName}/{fileName}")]
 		[ApiExplorerSettings(IgnoreApi = true)]
 		public async Task<IActionResult> Put([FromRoute] string userName,
 											 [FromRoute] string calendarName,
@@ -278,7 +282,7 @@ namespace CalDavSharp.Server.Controllers
 
 		[BasicAuth("CalDAV Server")]
 		[HttpGet]
-		[Route("/calendars/**.")]
+		[Route("/**.")]
         public async Task<IActionResult> Get()
         {
 			throw new NotImplementedException();

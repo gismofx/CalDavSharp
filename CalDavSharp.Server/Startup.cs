@@ -58,7 +58,9 @@ namespace CalDavSharp.Server
 
             services.AddBasicAuthController();
 
-
+            services.AddLogging(loggingBuilder => {
+                loggingBuilder.AddFile("app.log", append: true);
+            });
 
             /* Try LiteDB as alternative to sqlite.. sticking with sqlite for now
             var mapper = BsonMapper.Global;
@@ -76,7 +78,7 @@ namespace CalDavSharp.Server
 
             }
             */
-            
+
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -96,11 +98,15 @@ namespace CalDavSharp.Server
             app.UseAuthentication();
             app.UseAuthorization();
 
+            app.UseRequestResponseLogging();
+
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();
             });
 
+            
+            /*
             //for debugging
             app.Use(async (context, next) =>
             {
@@ -117,7 +123,7 @@ namespace CalDavSharp.Server
                 }
                 await next();
             });
-            
+            */
             
 
         }
