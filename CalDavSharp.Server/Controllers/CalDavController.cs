@@ -94,7 +94,7 @@ namespace CalDavSharp.Server.Controllers
 		[Route("")]
 		[Route("{userName}")]
 		[Route("{userName}/{calendarName}")]
-		public async Task<ActionResult<System.Xml.Linq.XDocument>> PropFind([FromRoute] string userName,
+		public async Task<ActionResult<XDocument>> PropFind([FromRoute] string userName,
 												  [FromRoute] string calendarName,
 												  [FromBody] XElement xrequest)
 		{

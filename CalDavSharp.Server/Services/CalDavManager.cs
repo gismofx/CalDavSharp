@@ -65,7 +65,7 @@ namespace CalDavSharp.Server.Services
         {
             //var basePath = @$"{context.Request.Scheme}://{context.Request.Host}";
             //userName = HttpUtility.UrlEncode(userName);
-
+            _UserName = userName;
             _UserUrl = @$"/calendars/{userName}/";
             _PrincipalUrl = @$"/principals/{userName}/";
             _CalendarUrl = @$"{_UserUrl}/{calendarName}/";
@@ -95,6 +95,7 @@ namespace CalDavSharp.Server.Services
             /*start edit*/
             var availableProps = DavProperty.Properties;
             var returnProps = new Dictionary<string,XElement>();
+            var prop404 = new List<XElement>();
             foreach (var prop in props)
             {
                 if (availableProps.TryGetValue(prop.Name.LocalName, out DavProperty propName))
@@ -103,9 +104,12 @@ namespace CalDavSharp.Server.Services
                 }
                 else
                 {
-                    throw new Exception($"Prop: {prop.Name} is not available.");
+                    prop404.Add(prop);
+                    //throw new Exception($"Prop: {prop.Name} is not available.");
                 }
             }
+
+
 
             /*
             try
@@ -187,13 +191,18 @@ namespace CalDavSharp.Server.Services
                 supportedComponentsName
             };
             */
-            var supportedProperties = availableProps;
-            var prop404 = xDav.Element("prop", props
-                        .Where(p => !supportedProperties.ContainsKey(p.Name.LocalName))
-                        .Select(p => new XElement(p.Name))
-                );
-            var propStat404 = xDav.Element("propstat",
-                xDav.Element("status", "HTTP/1.1 404 Not Found"), prop404);
+            //var supportedProperties = availableProps;
+            //var prop404 = xDav.Element("prop", props
+            //            .Where(p => !supportedProperties.ContainsKey(p.Name.LocalName))
+            //            .Select(p => new XElement(p.Name))
+            //    );
+            //var propStat404 = xDav.Element("propstat",
+            //    xDav.Element("status", "HTTP/1.1 404 Not Found"), prop404);
+
+            /*resourceType, owner, supportedComponents, displayName,
+ getContentType, calendarDescription, calendarHomeSet,
+ currentUserPrincipal, supportedReportSet, calendarColor,
+ calendarUserAddress*/
 
             //@ToDo: look up properties and foreach below inside propstat to product the properties
             var e = xDav.Element("multistatus",
@@ -206,14 +215,9 @@ namespace CalDavSharp.Server.Services
                                 xDav.Element("status", "HTTP/1.1 200 OK"),
                                 xDav.Element("prop",
                                     returnProps.Values
-                                /*resourceType, owner, supportedComponents, displayName,
-                                getContentType, calendarDescription, calendarHomeSet,
-                                currentUserPrincipal, supportedReportSet, calendarColor,
-                                calendarUserAddress*/
                                 )
                             ),
-
-                            (prop404.Elements().Any() ? propStat404 : null)
+                    prop404.Any() ? xDav.Element("propstat", xDav.Element("status", "HTTP/1.1 404 Not Found"), xDav.Element("prop", prop404)) : null
                      ),
 
                      (depth == 0 ? null :
@@ -472,7 +476,7 @@ namespace CalDavSharp.Server.Services
                 case "calendar-user-address-set":
                     outputElement =
                             caldavProperty.xElement(
-                            hrefName.Element(_UserUrl),
+                            /*hrefName.Element(_UserUrl),*/
                             hrefName.Element("mailto:" + GetUserEmail())
                             );
                     break;
@@ -511,7 +515,7 @@ namespace CalDavSharp.Server.Services
 
                 case "displayname":
                     outputElement = 
-                        caldavProperty.xElement(calendar.CalendarName ?? calendar.CalendarId);
+                        calendar is null ? null :caldavProperty.xElement(calendar.CalendarName ?? calendar.CalendarId);
                     break;
 
                 case "calendar-color":
@@ -572,7 +576,8 @@ namespace CalDavSharp.Server.Services
 
         private string GetUserEmail()
         {
-            throw new NotImplementedException();
+            return _UserName;
+            //throw new NotImplementedException();
         }
 
         //@Todo: Add logic for return code
